@@ -1,6 +1,7 @@
 # app/auth/routes.py
 from flask import redirect, url_for, render_template, current_app
 from flask_login import login_user, logout_user
+from authlib.integrations.base_client.errors import OAuthError
 from app.auth import auth_bp
 from app.extensions import db, oauth
 from app.models import User
@@ -19,7 +20,10 @@ def google():
 
 @auth_bp.route('/callback')
 def callback():
-    token = oauth.google.authorize_access_token()
+    try:
+        token = oauth.google.authorize_access_token()
+    except OAuthError:
+        return render_template('auth/denied.html', email='unknown'), 400
     user_info = token.get('userinfo')
     if not user_info:
         return render_template('auth/denied.html', email='unknown'), 403
