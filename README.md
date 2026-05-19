@@ -67,7 +67,11 @@ pytest
 | `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth client secret |
 | `APPROVED_EMAILS` | Yes | Comma-separated list of allowed email addresses |
 | `APP_NAME` | No | App display name (default: `Family Hub`) |
-| `DATABASE_URL` | Cloud only | PostgreSQL connection string |
+| `CLOUD_SQL_CONNECTION_NAME` | Cloud only | Cloud SQL instance in `project:region:instance` format |
+| `DB_USER` | Cloud only | Database username |
+| `DB_PASSWORD` | Cloud only | Database password |
+| `DB_NAME` | Cloud only | Database name |
+| `DATABASE_URL` | Cloud only | Full PostgreSQL URL — fallback if the `DB_*` vars above are not set |
 
 ## Project Structure
 
@@ -88,9 +92,30 @@ TNFamily/
 
 ## Cloud Deployment (Google Cloud Run)
 
+### Prerequisites
+
+- Cloud SQL PostgreSQL instance with a database and user created
+- Cloud Run service account granted the **Cloud SQL Client** role (`roles/cloudsql.client`)
+
+### Steps
+
 1. Build and push the Docker image (see `Dockerfile`)
-2. Set all environment variables in Cloud Run (same as `.env`, minus `FLASK_ENV` which defaults to `cloud`)
-3. Set `DATABASE_URL` to your Cloud SQL PostgreSQL connection string
+2. Under **Connections → Cloud SQL connections** in your Cloud Run service, add your Cloud SQL instance — this makes the Unix socket available to the container
+3. Set the following environment variables in Cloud Run:
+
+   | Variable | Value |
+   |---|---|
+   | `FLASK_ENV` | `cloud` |
+   | `SECRET_KEY` | generated value |
+   | `GOOGLE_CLIENT_ID` | your OAuth client ID |
+   | `GOOGLE_CLIENT_SECRET` | your OAuth client secret |
+   | `APPROVED_EMAILS` | comma-separated email list |
+   | `APP_NAME` | `The Achtyes-Hopper Family` |
+   | `CLOUD_SQL_CONNECTION_NAME` | `project-id:region:instance-name` |
+   | `DB_USER` | database username |
+   | `DB_PASSWORD` | database password |
+   | `DB_NAME` | database name |
+
 4. Add the Cloud Run service URL to **Authorized redirect URIs** in Google Cloud Console: `https://<your-service>.run.app/auth/callback`
 
 > **Before making schema changes:** integrate [Flask-Migrate](https://flask-migrate.readthedocs.io/) — `db.create_all()` will not apply column additions to existing tables.
