@@ -1,9 +1,21 @@
-<!DOCTYPE html>
-<html>
-<head><title>Access Denied</title></head>
-<body>
-  <h2>Access Denied</h2>
-  <p>{{ email }} is not authorized.</p>
-  <a href="/auth/login">Try a different account</a>
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}Access Denied — {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+  <div class="col-md-5">
+    <div class="card shadow-sm border-danger">
+      <div class="card-body text-center p-5">
+        <h2 class="h4 mb-3">Access Denied</h2>
+        <p class="text-muted">
+          <strong>{{ email }}</strong> is not authorized to access this app.
+        </p>
+        <p class="text-muted mb-4">Please contact a family member to be added.</p>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary">
+          Try a different account
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
