@@ -21,6 +21,8 @@ def google():
 def callback():
     token = oauth.google.authorize_access_token()
     user_info = token.get('userinfo')
+    if not user_info:
+        return render_template('auth/denied.html', email='unknown'), 403
     email = user_info['email']
 
     if email not in current_app.config.get('APPROVED_EMAILS', []):
