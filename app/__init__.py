@@ -2,7 +2,7 @@
 import os
 from flask import Flask
 from config import config_map
-from app.extensions import db, login_manager, oauth
+from app.extensions import db, login_manager, migrate, oauth
 
 
 def create_app(config_override=None):
@@ -14,6 +14,7 @@ def create_app(config_override=None):
         app.config.update(config_override)
 
     db.init_app(app)
+    migrate.init_app(app, db)
     login_manager.init_app(app)
     oauth.init_app(app)
 

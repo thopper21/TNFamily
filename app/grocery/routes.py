@@ -1,6 +1,7 @@
 # app/grocery/routes.py
 from flask import render_template, request, jsonify, redirect, url_for
 from flask_login import login_required
+from sqlalchemy.orm import joinedload
 from app.grocery import grocery_bp
 from app.extensions import db
 from app.models import StoreSection, StapleItem, ShoppingListItem
@@ -9,7 +10,13 @@ from app.models import StoreSection, StapleItem, ShoppingListItem
 @grocery_bp.route('/')
 @login_required
 def index():
-    staples = StapleItem.query.order_by(StapleItem.on_shopping_list, StapleItem.name).all()
+    staples = (
+        StapleItem.query
+        .options(joinedload(StapleItem.shopping_list_item))
+        .order_by(StapleItem.name)
+        .all()
+    )
+    staples.sort(key=lambda s: s.shopping_list_item is not None)
     sections = StoreSection.query.order_by(StoreSection.name).all()
     shopping_count = ShoppingListItem.query.count()
     ad_hoc_items = (
@@ -54,7 +61,7 @@ def add_staple():
         'name': staple.name,
         'section_id': staple.section_id,
         'section_name': staple.section.name if staple.section else None,
-        'on_shopping_list': staple.on_shopping_list,
+        'on_shopping_list': staple.shopping_list_item is not None,
     })
 
 
@@ -64,20 +71,16 @@ def toggle_staple(staple_id):
     staple = db.session.get(StapleItem, staple_id)
     if not staple:
         return jsonify({'ok': False, 'error': 'Not found'}), 404
-    if staple.on_shopping_list:
-        if staple.shopping_list_item:
-            db.session.delete(staple.shopping_list_item)
-        staple.on_shopping_list = False
+    if staple.shopping_list_item:
+        db.session.delete(staple.shopping_list_item)
     else:
-        item = ShoppingListItem(
+        db.session.add(ShoppingListItem(
             name=staple.name, section_id=staple.section_id, staple_item_id=staple.id
-        )
-        db.session.add(item)
-        staple.on_shopping_list = True
+        ))
     db.session.commit()
     return jsonify({
         'ok': True,
-        'on_shopping_list': staple.on_shopping_list,
+        'on_shopping_list': staple.shopping_list_item is not None,
         'shopping_count': ShoppingListItem.query.count(),
     })
 
@@ -151,7 +154,6 @@ def toggle_list_item(item_id):
 @login_required
 def done_shopping():
     ShoppingListItem.query.delete(synchronize_session=False)
-    StapleItem.query.update({'on_shopping_list': False}, synchronize_session=False)
     db.session.commit()
     return redirect(url_for('grocery.index'))
 

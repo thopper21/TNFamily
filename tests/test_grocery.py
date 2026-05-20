@@ -10,12 +10,12 @@ def test_staple_item_defaults(app):
         db.session.add(staple)
         db.session.commit()
         assert db.session.get(StapleItem, staple.id).name == 'Milk'
-        assert staple.on_shopping_list is False
+        assert staple.shopping_list_item is None
 
 
 def test_delete_staple_cascades_to_shopping_list_item(app):
     with app.app_context():
-        staple = StapleItem(name='Milk', on_shopping_list=True)
+        staple = StapleItem(name='Milk')
         db.session.add(staple)
         db.session.flush()
         item = ShoppingListItem(name='Milk', staple_item_id=staple.id)
@@ -149,13 +149,12 @@ def test_toggle_staple_on_creates_shopping_list_item(logged_in_client, app):
     assert data['ok'] is True
     assert data['on_shopping_list'] is True
     with app.app_context():
-        assert db.session.get(StapleItem, staple_id).on_shopping_list is True
         assert ShoppingListItem.query.filter_by(staple_item_id=staple_id).first() is not None
 
 
 def test_toggle_staple_off_deletes_shopping_list_item(logged_in_client, app):
     with app.app_context():
-        staple = StapleItem(name='Milk', on_shopping_list=True)
+        staple = StapleItem(name='Milk')
         db.session.add(staple)
         db.session.flush()
         item = ShoppingListItem(name='Milk', staple_item_id=staple.id)
@@ -166,7 +165,6 @@ def test_toggle_staple_off_deletes_shopping_list_item(logged_in_client, app):
     assert resp.status_code == 200
     assert resp.get_json()['on_shopping_list'] is False
     with app.app_context():
-        assert db.session.get(StapleItem, staple_id).on_shopping_list is False
         assert ShoppingListItem.query.filter_by(staple_item_id=staple_id).first() is None
 
 
@@ -273,7 +271,7 @@ def test_toggle_list_item_not_found_returns_404(logged_in_client):
 
 def test_done_shopping_clears_list_and_resets_staples(logged_in_client, app):
     with app.app_context():
-        staple = StapleItem(name='Milk', on_shopping_list=True)
+        staple = StapleItem(name='Milk')
         db.session.add(staple)
         db.session.flush()
         db.session.add(ShoppingListItem(name='Milk', staple_item_id=staple.id))
@@ -284,7 +282,7 @@ def test_done_shopping_clears_list_and_resets_staples(logged_in_client, app):
     assert resp.status_code == 302
     with app.app_context():
         assert ShoppingListItem.query.count() == 0
-        assert db.session.get(StapleItem, staple_id).on_shopping_list is False
+        assert db.session.get(StapleItem, staple_id).shopping_list_item is None
 
 
 def test_add_staple_invalid_section_returns_400(logged_in_client):
@@ -311,7 +309,7 @@ def test_grocery_index_shows_ad_hoc_items(logged_in_client, app):
 def test_grocery_index_does_not_show_staple_list_items(logged_in_client, app):
     import re
     with app.app_context():
-        staple = StapleItem(name='Milk', on_shopping_list=True)
+        staple = StapleItem(name='Milk')
         db.session.add(staple)
         db.session.flush()
         db.session.add(ShoppingListItem(name='Milk', staple_item_id=staple.id))
@@ -467,8 +465,10 @@ def test_edit_section_requires_login(client, app):
 
 def test_staple_on_list_shows_on_list_badge(logged_in_client, app):
     with app.app_context():
-        staple = StapleItem(name='Milk', on_shopping_list=True)
+        staple = StapleItem(name='Milk')
         db.session.add(staple)
+        db.session.flush()
+        db.session.add(ShoppingListItem(name='Milk', staple_item_id=staple.id))
         db.session.commit()
     resp = logged_in_client.get('/grocery/')
     assert resp.status_code == 200
@@ -477,8 +477,10 @@ def test_staple_on_list_shows_on_list_badge(logged_in_client, app):
 
 def test_staple_on_list_no_strikethrough(logged_in_client, app):
     with app.app_context():
-        staple = StapleItem(name='Milk', on_shopping_list=True)
+        staple = StapleItem(name='Milk')
         db.session.add(staple)
+        db.session.flush()
+        db.session.add(ShoppingListItem(name='Milk', staple_item_id=staple.id))
         db.session.commit()
     resp = logged_in_client.get('/grocery/')
     assert b'text-decoration-line-through' not in resp.data
