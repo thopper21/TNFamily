@@ -68,12 +68,26 @@
           </select>
           <button type="submit" class="btn btn-primary">Add to list</button>
         </form>
-        <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div class="d-flex align-items-center gap-3 flex-wrap mb-2">
           <span class="badge bg-primary fs-6" id="shopping-count">
             {{ shopping_count }} item{{ 's' if shopping_count != 1 else '' }} on your list
           </span>
           <a href="{{ url_for('grocery.shop') }}" class="btn btn-success">Start Shopping →</a>
         </div>
+        {% if ad_hoc_items %}
+        <ul class="list-group list-group-flush" id="ad-hoc-list">
+          {% for item in ad_hoc_items %}
+          <li class="list-group-item d-flex justify-content-between align-items-center py-1 px-0 border-0 text-muted small"
+              id="ad-hoc-{{ item.id }}">
+            <span>{{ item.name }}{% if item.section %} <span class="badge bg-light text-secondary fw-normal">{{ item.section.name }}</span>{% endif %}</span>
+            <button class="btn btn-link btn-sm text-muted p-0 ms-2 lh-1"
+                    onclick="deleteAdHocItem({{ item.id }}, this)">×</button>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <ul class="list-group list-group-flush" id="ad-hoc-list"></ul>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -96,6 +110,7 @@ const ADD_TO_LIST_URL = {{ url_for('grocery.add_to_list') | tojson }};
 
 function toggleStapleUrl(id) { return GROCERY_BASE + 'staples/' + id + '/toggle'; }
 function deleteStapleUrl(id) { return GROCERY_BASE + 'staples/' + id + '/delete'; }
+function deleteListItemUrl(id) { return GROCERY_BASE + 'list/' + id + '/delete'; }
 
 function showError(msg) {
   document.getElementById('error-toast-body').textContent = msg;
@@ -187,21 +202,56 @@ document.getElementById('add-staple-form').addEventListener('submit', async (e) 
   }
 });
 
+async function deleteAdHocItem(itemId, btn) {
+  try {
+    const resp = await fetch(deleteListItemUrl(itemId), {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error);
+    document.getElementById('ad-hoc-' + itemId).remove();
+    updateShoppingCount(data.shopping_count);
+  } catch (e) {
+    showError(e.message || 'Something went wrong');
+  }
+}
+
 document.getElementById('add-list-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const nameInput = document.getElementById('list-item-name');
   const sectionSelect = document.getElementById('list-item-section');
   const name = nameInput.value.trim();
   if (!name) return;
+  const sectionId = sectionSelect.value || null;
+  const sectionText = sectionSelect.options[sectionSelect.selectedIndex].text;
   try {
     const resp = await fetch(ADD_TO_LIST_URL, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({name, section_id: sectionSelect.value || null}),
+      body: JSON.stringify({name, section_id: sectionId}),
     });
     const data = await resp.json();
     if (!data.ok) throw new Error(data.error);
     updateShoppingCount(data.shopping_count);
+    const li = document.createElement('li');
+    li.className = 'list-group-item d-flex justify-content-between align-items-center py-1 px-0 border-0 text-muted small';
+    li.id = 'ad-hoc-' + data.id;
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = name;
+    if (sectionId) {
+      const badge = document.createElement('span');
+      badge.className = 'badge bg-light text-secondary fw-normal ms-1';
+      badge.textContent = sectionText;
+      nameSpan.appendChild(badge);
+    }
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-link btn-sm text-muted p-0 ms-2 lh-1';
+    delBtn.textContent = '×';
+    delBtn.onclick = () => deleteAdHocItem(data.id, delBtn);
+    li.appendChild(nameSpan);
+    li.appendChild(delBtn);
+    document.getElementById('ad-hoc-list').prepend(li);
     nameInput.value = '';
     sectionSelect.value = '';
   } catch (e) {

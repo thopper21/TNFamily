@@ -285,3 +285,47 @@ def test_add_one_off_item_invalid_section_returns_400(logged_in_client):
     resp = logged_in_client.post('/grocery/list/add', json={'name': 'Sriracha', 'section_id': 9999})
     assert resp.status_code == 400
     assert resp.get_json()['ok'] is False
+
+
+def test_grocery_index_shows_ad_hoc_items(logged_in_client, app):
+    with app.app_context():
+        db.session.add(ShoppingListItem(name='Sriracha'))
+        db.session.commit()
+    resp = logged_in_client.get('/grocery/')
+    assert resp.status_code == 200
+    assert b'Sriracha' in resp.data
+
+
+def test_grocery_index_does_not_show_staple_list_items(logged_in_client, app):
+    import re
+    with app.app_context():
+        staple = StapleItem(name='Milk', on_shopping_list=True)
+        db.session.add(staple)
+        db.session.flush()
+        db.session.add(ShoppingListItem(name='Milk', staple_item_id=staple.id))
+        db.session.commit()
+    resp = logged_in_client.get('/grocery/')
+    assert resp.status_code == 200
+    # Staple-linked items must not appear as ad-hoc list entries
+    assert not re.search(rb'id="ad-hoc-\d+"', resp.data)
+
+
+def test_delete_list_item(logged_in_client, app):
+    with app.app_context():
+        item = ShoppingListItem(name='Sriracha')
+        db.session.add(item)
+        db.session.commit()
+        item_id = item.id
+    resp = logged_in_client.post(f'/grocery/list/{item_id}/delete')
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['ok'] is True
+    assert 'shopping_count' in data
+    with app.app_context():
+        assert db.session.get(ShoppingListItem, item_id) is None
+
+
+def test_delete_list_item_not_found_returns_404(logged_in_client):
+    resp = logged_in_client.post('/grocery/list/9999/delete')
+    assert resp.status_code == 404
+    assert resp.get_json()['ok'] is False

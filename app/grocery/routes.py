@@ -12,8 +12,18 @@ def index():
     staples = StapleItem.query.order_by(StapleItem.on_shopping_list, StapleItem.name).all()
     sections = StoreSection.query.order_by(StoreSection.name).all()
     shopping_count = ShoppingListItem.query.count()
+    ad_hoc_items = (
+        ShoppingListItem.query
+        .filter_by(staple_item_id=None)
+        .order_by(ShoppingListItem.created_at.desc())
+        .all()
+    )
     return render_template(
-        'grocery/home.html', staples=staples, sections=sections, shopping_count=shopping_count
+        'grocery/home.html',
+        staples=staples,
+        sections=sections,
+        shopping_count=shopping_count,
+        ad_hoc_items=ad_hoc_items,
     )
 
 
@@ -105,6 +115,17 @@ def shop():
             unsectioned.append(item)
     grouped = sorted(section_map.values(), key=lambda x: x[0].name)
     return render_template('grocery/shop.html', grouped=grouped, unsectioned=unsectioned)
+
+
+@grocery_bp.route('/list/<int:item_id>/delete', methods=['POST'])
+@login_required
+def delete_list_item(item_id):
+    item = db.session.get(ShoppingListItem, item_id)
+    if not item:
+        return jsonify({'ok': False, 'error': 'Not found'}), 404
+    db.session.delete(item)
+    db.session.commit()
+    return jsonify({'ok': True, 'shopping_count': ShoppingListItem.query.count()})
 
 
 @grocery_bp.route('/list/<int:item_id>/toggle', methods=['POST'])
