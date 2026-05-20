@@ -51,15 +51,14 @@
 
 <script>
 const ADD_SECTION_URL = {{ url_for('grocery.add_section') | tojson }};
-const DELETE_SECTION_BASE_URL = {{ url_for('grocery.delete_section', section_id=0) | tojson }};
-const EDIT_SECTION_BASE_URL = {{ url_for('grocery.edit_section', section_id=0) | tojson }};
+const GROCERY_BASE = {{ url_for('grocery.index') | tojson }};
 
 function deleteSectionUrl(id) {
-  return DELETE_SECTION_BASE_URL.replace('/0/', '/' + id + '/');
+  return GROCERY_BASE + 'sections/' + id + '/delete';
 }
 
 function editSectionUrl(id) {
-  return EDIT_SECTION_BASE_URL.replace('/0/', '/' + id + '/');
+  return GROCERY_BASE + 'sections/' + id + '/edit';
 }
 
 function showError(msg) {

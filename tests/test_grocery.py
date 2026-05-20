@@ -69,6 +69,11 @@ def test_sections_page_returns_200(logged_in_client):
     assert resp.status_code == 200
 
 
+def test_sections_page_uses_grocery_base_url_pattern(logged_in_client):
+    resp = logged_in_client.get('/grocery/sections')
+    assert b"replace('/0/'," not in resp.data
+
+
 def test_add_section(logged_in_client, app):
     resp = logged_in_client.post('/grocery/sections', json={'name': 'Dairy'})
     assert resp.status_code == 200
