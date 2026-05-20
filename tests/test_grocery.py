@@ -181,3 +181,26 @@ def test_toggle_staple_not_found_returns_404(logged_in_client):
     resp = logged_in_client.post('/grocery/staples/9999/toggle')
     assert resp.status_code == 404
     assert resp.get_json()['ok'] is False
+
+
+def test_grocery_index_returns_200(logged_in_client):
+    resp = logged_in_client.get('/grocery/')
+    assert resp.status_code == 200
+    assert b'Staples' in resp.data
+
+
+def test_add_one_off_item(logged_in_client, app):
+    resp = logged_in_client.post('/grocery/list/add', json={'name': 'Sriracha'})
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['ok'] is True
+    assert 'shopping_count' in data
+    with app.app_context():
+        item = ShoppingListItem.query.filter_by(name='Sriracha').first()
+        assert item is not None
+        assert item.staple_item_id is None
+
+
+def test_add_one_off_item_missing_name_returns_400(logged_in_client):
+    resp = logged_in_client.post('/grocery/list/add', json={'name': ''})
+    assert resp.status_code == 400

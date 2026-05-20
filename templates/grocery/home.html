@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Grocery — {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Grocery</h2>
+
+<div class="row">
+  <!-- Staples panel -->
+  <div class="col-md-6 mb-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Staples</h5>
+        <a href="{{ url_for('grocery.sections') }}" class="btn btn-sm btn-outline-secondary">Manage sections</a>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush" id="staples-list">
+          {% for staple in staples %}
+          <li class="list-group-item d-flex align-items-center gap-2 {% if staple.on_shopping_list %}text-muted{% endif %}"
+              id="staple-{{ staple.id }}">
+            <input type="checkbox" class="form-check-input flex-shrink-0"
+                   {% if staple.on_shopping_list %}checked{% endif %}
+                   onchange="toggleStaple({{ staple.id }}, this)">
+            <span class="flex-grow-1 {% if staple.on_shopping_list %}text-decoration-line-through{% endif %}">
+              {{ staple.name }}
+            </span>
+            {% if staple.section %}
+            <span class="badge bg-secondary">{{ staple.section.name }}</span>
+            {% endif %}
+            <form method="post" action="{{ url_for('grocery.delete_staple', staple_id=staple.id) }}"
+                  onsubmit="return confirm('Delete {{ staple.name | e }}?')">
+              <button type="submit" class="btn btn-sm btn-outline-danger py-0">×</button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="card-footer">
+        <form id="add-staple-form" class="d-flex gap-2 flex-wrap">
+          <input type="text" id="staple-name" class="form-control form-control-sm"
+                 placeholder="Item name" required>
+          <select id="staple-section" class="form-select form-select-sm" style="max-width:160px">
+            <option value="">No section</option>
+            {% for section in sections %}
+            <option value="{{ section.id }}">{{ section.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-sm btn-primary">Add</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add to list panel -->
+  <div class="col-md-6 mb-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-header">
+        <h5 class="mb-0">Add to list</h5>
+      </div>
+      <div class="card-body">
+        <form id="add-list-form" class="d-flex gap-2 flex-wrap mb-3">
+          <input type="text" id="list-item-name" class="form-control"
+                 placeholder="Item name" required>
+          <select id="list-item-section" class="form-select" style="max-width:160px">
+            <option value="">No section</option>
+            {% for section in sections %}
+            <option value="{{ section.id }}">{{ section.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-primary">Add to list</button>
+        </form>
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+          <span class="badge bg-primary fs-6" id="shopping-count">
+            {{ shopping_count }} item{{ 's' if shopping_count != 1 else '' }} on your list
+          </span>
+          <a href="{{ url_for('grocery.shop') }}" class="btn btn-success">Start Shopping →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="error-toast" class="toast" role="alert">
+    <div class="toast-header bg-danger text-white">
+      <strong class="me-auto">Error</strong>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body" id="error-toast-body"></div>
+  </div>
+</div>
+
+<script>
+const TOGGLE_STAPLE_BASE = {{ url_for('grocery.toggle_staple', staple_id=0) | tojson }};
+const ADD_STAPLE_URL = {{ url_for('grocery.add_staple') | tojson }};
+const DELETE_STAPLE_BASE = {{ url_for('grocery.delete_staple', staple_id=0) | tojson }};
+const ADD_TO_LIST_URL = {{ url_for('grocery.add_to_list') | tojson }};
+
+function toggleStapleUrl(id) { return TOGGLE_STAPLE_BASE.replace('/0/', '/' + id + '/'); }
+function deleteStapleUrl(id) { return DELETE_STAPLE_BASE.replace('/0/', '/' + id + '/'); }
+
+function showError(msg) {
+  document.getElementById('error-toast-body').textContent = msg;
+  new bootstrap.Toast(document.getElementById('error-toast')).show();
+}
+
+function updateShoppingCount(count) {
+  document.getElementById('shopping-count').textContent =
+    count + ' item' + (count !== 1 ? 's' : '') + ' on your list';
+}
+
+async function toggleStaple(stapleId, checkbox) {
+  const row = document.getElementById('staple-' + stapleId);
+  const wasChecked = !checkbox.checked;
+  try {
+    const resp = await fetch(toggleStapleUrl(stapleId), {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error);
+    const nameEl = row.querySelector('span.flex-grow-1');
+    if (data.on_shopping_list) {
+      row.classList.add('text-muted');
+      nameEl.classList.add('text-decoration-line-through');
+      checkbox.checked = true;
+      document.getElementById('staples-list').appendChild(row);
+    } else {
+      row.classList.remove('text-muted');
+      nameEl.classList.remove('text-decoration-line-through');
+      checkbox.checked = false;
+      document.getElementById('staples-list').prepend(row);
+    }
+    updateShoppingCount(data.shopping_count);
+  } catch (e) {
+    checkbox.checked = wasChecked;
+    showError(e.message || 'Something went wrong');
+  }
+}
+
+document.getElementById('add-staple-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const nameInput = document.getElementById('staple-name');
+  const sectionSelect = document.getElementById('staple-section');
+  const name = nameInput.value.trim();
+  if (!name) return;
+  try {
+    const resp = await fetch(ADD_STAPLE_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, section_id: sectionSelect.value || null}),
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error);
+    const li = document.createElement('li');
+    li.className = 'list-group-item d-flex align-items-center gap-2';
+    li.id = 'staple-' + data.id;
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'form-check-input flex-shrink-0';
+    checkbox.addEventListener('change', () => toggleStaple(data.id, checkbox));
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'flex-grow-1';
+    nameSpan.textContent = data.name;
+    li.appendChild(checkbox);
+    li.appendChild(nameSpan);
+    if (data.section_name) {
+      const badge = document.createElement('span');
+      badge.className = 'badge bg-secondary';
+      badge.textContent = data.section_name;
+      li.appendChild(badge);
+    }
+    const delForm = document.createElement('form');
+    delForm.method = 'post';
+    delForm.action = deleteStapleUrl(data.id);
+    delForm.addEventListener('submit', (ev) => {
+      if (!confirm('Delete ' + data.name + '?')) ev.preventDefault();
+    });
+    const delBtn = document.createElement('button');
+    delBtn.type = 'submit';
+    delBtn.className = 'btn btn-sm btn-outline-danger py-0';
+    delBtn.textContent = '×';
+    delForm.appendChild(delBtn);
+    li.appendChild(delForm);
+    document.getElementById('staples-list').prepend(li);
+    nameInput.value = '';
+  } catch (e) {
+    showError(e.message || 'Something went wrong');
+  }
+});
+
+document.getElementById('add-list-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const nameInput = document.getElementById('list-item-name');
+  const sectionSelect = document.getElementById('list-item-section');
+  const name = nameInput.value.trim();
+  if (!name) return;
+  try {
+    const resp = await fetch(ADD_TO_LIST_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, section_id: sectionSelect.value || null}),
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error);
+    updateShoppingCount(data.shopping_count);
+    nameInput.value = '';
+    sectionSelect.value = '';
+  } catch (e) {
+    showError(e.message || 'Something went wrong');
+  }
+});
+</script>
+{% endblock %}

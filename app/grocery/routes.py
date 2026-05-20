@@ -9,7 +9,12 @@ from app.models import StoreSection, StapleItem, ShoppingListItem
 @grocery_bp.route('/')
 @login_required
 def index():
-    return 'OK', 200
+    staples = StapleItem.query.order_by(StapleItem.on_shopping_list, StapleItem.name).all()
+    sections = StoreSection.query.order_by(StoreSection.name).all()
+    shopping_count = ShoppingListItem.query.count()
+    return render_template(
+        'grocery/home.html', staples=staples, sections=sections, shopping_count=shopping_count
+    )
 
 
 @grocery_bp.route('/staples', methods=['POST'])
@@ -70,7 +75,15 @@ def delete_staple(staple_id):
 @grocery_bp.route('/list/add', methods=['POST'])
 @login_required
 def add_to_list():
-    return jsonify({'ok': True}), 200
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'ok': False, 'error': 'Name is required'}), 400
+    section_id = data.get('section_id') or None
+    item = ShoppingListItem(name=name, section_id=section_id)
+    db.session.add(item)
+    db.session.commit()
+    return jsonify({'ok': True, 'id': item.id, 'shopping_count': ShoppingListItem.query.count()})
 
 
 @grocery_bp.route('/list/<int:item_id>/toggle', methods=['POST'])
