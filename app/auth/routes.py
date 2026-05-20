@@ -1,6 +1,7 @@
 # app/auth/routes.py
 from flask import redirect, url_for, render_template, current_app
 from flask_login import login_user, logout_user
+from sqlalchemy import select
 from authlib.integrations.base_client.errors import OAuthError
 from app.auth import auth_bp
 from app.extensions import db, oauth
@@ -32,7 +33,7 @@ def callback():
     if email not in current_app.config.get('APPROVED_EMAILS', []):
         return render_template('auth/denied.html', email=email), 403
 
-    user = User.query.filter_by(google_id=user_info['sub']).first()
+    user = db.session.scalar(select(User).where(User.google_id == user_info['sub']))
     if user is None:
         user = User(
             google_id=user_info['sub'],

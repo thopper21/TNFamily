@@ -1,5 +1,6 @@
 # tests/test_grocery.py
 import pytest
+from sqlalchemy import func, select, update
 from app.models import StoreSection, StapleItem, ShoppingListItem
 from app.extensions import db
 
@@ -38,8 +39,8 @@ def test_section_delete_nulls_item_references(app):
         db.session.commit()
         staple_id, item_id = staple.id, list_item.id
         # Mirrors what delete_section route does (SQLite doesn't enforce FK cascades)
-        StapleItem.query.filter_by(section_id=section.id).update({'section_id': None})
-        ShoppingListItem.query.filter_by(section_id=section.id).update({'section_id': None})
+        db.session.execute(update(StapleItem).where(StapleItem.section_id == section.id).values(section_id=None))
+        db.session.execute(update(ShoppingListItem).where(ShoppingListItem.section_id == section.id).values(section_id=None))
         db.session.delete(section)
         db.session.commit()
         assert db.session.get(StapleItem, staple_id).section_id is None
@@ -81,7 +82,7 @@ def test_add_section(logged_in_client, app):
     assert data['ok'] is True
     assert data['name'] == 'Dairy'
     with app.app_context():
-        assert StoreSection.query.filter_by(name='Dairy').first() is not None
+        assert db.session.scalar(select(StoreSection).where(StoreSection.name == 'Dairy')) is not None
 
 
 def test_add_duplicate_section_returns_409(logged_in_client, app):
@@ -128,7 +129,7 @@ def test_add_staple(logged_in_client, app):
     assert data['ok'] is True
     assert data['name'] == 'Eggs'
     with app.app_context():
-        assert StapleItem.query.filter_by(name='Eggs').first() is not None
+        assert db.session.scalar(select(StapleItem).where(StapleItem.name == 'Eggs')) is not None
 
 
 def test_add_staple_missing_name_returns_400(logged_in_client):
@@ -149,7 +150,7 @@ def test_toggle_staple_on_creates_shopping_list_item(logged_in_client, app):
     assert data['ok'] is True
     assert data['on_shopping_list'] is True
     with app.app_context():
-        assert ShoppingListItem.query.filter_by(staple_item_id=staple_id).first() is not None
+        assert db.session.scalar(select(ShoppingListItem).where(ShoppingListItem.staple_item_id == staple_id)) is not None
 
 
 def test_toggle_staple_off_deletes_shopping_list_item(logged_in_client, app):
@@ -165,7 +166,7 @@ def test_toggle_staple_off_deletes_shopping_list_item(logged_in_client, app):
     assert resp.status_code == 200
     assert resp.get_json()['on_shopping_list'] is False
     with app.app_context():
-        assert ShoppingListItem.query.filter_by(staple_item_id=staple_id).first() is None
+        assert db.session.scalar(select(ShoppingListItem).where(ShoppingListItem.staple_item_id == staple_id)) is None
 
 
 def test_delete_staple(logged_in_client, app):
@@ -199,7 +200,7 @@ def test_add_one_off_item(logged_in_client, app):
     assert data['ok'] is True
     assert 'shopping_count' in data
     with app.app_context():
-        item = ShoppingListItem.query.filter_by(name='Sriracha').first()
+        item = db.session.scalar(select(ShoppingListItem).where(ShoppingListItem.name == 'Sriracha'))
         assert item is not None
         assert item.staple_item_id is None
 
@@ -281,7 +282,7 @@ def test_done_shopping_clears_list_and_resets_staples(logged_in_client, app):
     resp = logged_in_client.post('/grocery/list/done')
     assert resp.status_code == 302
     with app.app_context():
-        assert ShoppingListItem.query.count() == 0
+        assert db.session.scalar(select(func.count()).select_from(ShoppingListItem)) == 0
         assert db.session.get(StapleItem, staple_id).shopping_list_item is None
 
 
@@ -432,7 +433,7 @@ def test_edit_section_duplicate_name_returns_409(logged_in_client, app):
         db.session.add(StoreSection(name='Dairy'))
         db.session.add(StoreSection(name='Produce'))
         db.session.commit()
-        section_id = StoreSection.query.filter_by(name='Dairy').first().id
+        section_id = db.session.scalar(select(StoreSection).where(StoreSection.name == 'Dairy')).id
     resp = logged_in_client.post(f'/grocery/sections/{section_id}/edit', json={'name': 'Produce'})
     assert resp.status_code == 409
     assert resp.get_json()['ok'] is False
