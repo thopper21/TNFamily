@@ -1,5 +1,5 @@
 # app/models.py
-from datetime import datetime
+from datetime import datetime, timezone
 from flask_login import UserMixin
 from app.extensions import db, login_manager
 
@@ -10,7 +10,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(256), unique=True, nullable=False)
     name = db.Column(db.String(256), nullable=False)
     profile_picture_url = db.Column(db.String(512))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 @login_manager.user_loader
@@ -33,7 +33,7 @@ class StapleItem(db.Model):
         db.Integer, db.ForeignKey('store_section.id', ondelete='SET NULL'), nullable=True
     )
     on_shopping_list = db.Column(db.Boolean, nullable=False, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     section = db.relationship('StoreSection', foreign_keys=[section_id])
     shopping_list_item = db.relationship(
@@ -54,7 +54,7 @@ class ShoppingListItem(db.Model):
         db.Integer, db.ForeignKey('staple_item.id', ondelete='CASCADE'), nullable=True
     )
     checked = db.Column(db.Boolean, nullable=False, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     section = db.relationship('StoreSection', foreign_keys=[section_id])
     staple = db.relationship('StapleItem', back_populates='shopping_list_item')
