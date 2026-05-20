@@ -75,13 +75,11 @@ flask db upgrade
 flask db migrate -m "description of change"
 ```
 
-**Upgrading an existing deployment that used `db.create_all()`:**
+**Upgrading an existing deployment** (including those originally set up with `db.create_all()`):
 ```bash
-# Tell Alembic the DB is at the initial revision (tables already exist)
-flask db stamp a3f9b1c2e4d7
-# Apply the column-removal migration
 flask db upgrade
 ```
+The initial migration detects existing tables and skips creating them, so this is safe to run against any database state.
 
 ## Environment Variables
 
