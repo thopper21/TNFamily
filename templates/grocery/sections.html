@@ -43,6 +43,13 @@
 </div>
 
 <script>
+const ADD_SECTION_URL = {{ url_for('grocery.add_section') | tojson }};
+const DELETE_SECTION_BASE_URL = {{ url_for('grocery.delete_section', section_id=0) | tojson }};
+
+function deleteSectionUrl(id) {
+  return DELETE_SECTION_BASE_URL.replace('/0/', '/' + id + '/');
+}
+
 function showError(msg) {
   document.getElementById('error-toast-body').textContent = msg;
   new bootstrap.Toast(document.getElementById('error-toast')).show();
@@ -54,7 +61,7 @@ document.getElementById('add-section-form').addEventListener('submit', async (e)
   const name = nameInput.value.trim();
   if (!name) return;
   try {
-    const resp = await fetch('/grocery/sections', {
+    const resp = await fetch(ADD_SECTION_URL, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({name}),
@@ -68,7 +75,7 @@ document.getElementById('add-section-form').addEventListener('submit', async (e)
     nameSpan.textContent = data.name;
     const form = document.createElement('form');
     form.method = 'post';
-    form.action = '/grocery/sections/' + data.id + '/delete';
+    form.action = deleteSectionUrl(data.id);
     form.addEventListener('submit', (ev) => {
       if (!confirm('Delete this section? Items will lose their section.')) ev.preventDefault();
     });
