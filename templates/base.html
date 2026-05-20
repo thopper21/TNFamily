@@ -16,11 +16,12 @@
       </button>
       <div class="collapse navbar-collapse" id="navContent">
         <ul class="navbar-nav me-auto">
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('grocery.index') }}">Grocery</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('grocery.shop') }}">Shopping</a>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Grocery</a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="{{ url_for('grocery.index') }}">Manage List</a></li>
+              <li><a class="dropdown-item" href="{{ url_for('grocery.shop') }}">Shop</a></li>
+            </ul>
           </li>
         </ul>
         <ul class="navbar-nav ms-auto align-items-center">
