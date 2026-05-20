@@ -44,3 +44,21 @@ def test_section_delete_nulls_item_references(app):
         db.session.commit()
         assert db.session.get(StapleItem, staple_id).section_id is None
         assert db.session.get(ShoppingListItem, item_id).section_id is None
+
+
+def test_grocery_index_requires_login(client):
+    resp = client.get('/grocery/')
+    assert resp.status_code == 302
+    assert '/auth/login' in resp.headers['Location']
+
+
+def test_grocery_shop_requires_login(client):
+    resp = client.get('/grocery/shop')
+    assert resp.status_code == 302
+    assert '/auth/login' in resp.headers['Location']
+
+
+def test_grocery_sections_requires_login(client):
+    resp = client.get('/grocery/sections')
+    assert resp.status_code == 302
+    assert '/auth/login' in resp.headers['Location']
