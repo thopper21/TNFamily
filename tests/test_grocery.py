@@ -331,6 +331,43 @@ def test_delete_list_item_not_found_returns_404(logged_in_client):
     assert resp.get_json()['ok'] is False
 
 
+def test_staple_list_items_have_data_name_attribute(logged_in_client, app):
+    with app.app_context():
+        db.session.add(StapleItem(name='Milk'))
+        db.session.commit()
+    resp = logged_in_client.get('/grocery/')
+    assert resp.status_code == 200
+    assert b'data-name="Milk"' in resp.data
+
+
+def test_staple_list_items_have_data_section_attribute(logged_in_client, app):
+    with app.app_context():
+        section = StoreSection(name='Dairy')
+        db.session.add(section)
+        db.session.flush()
+        db.session.add(StapleItem(name='Milk', section_id=section.id))
+        db.session.commit()
+    resp = logged_in_client.get('/grocery/')
+    assert resp.status_code == 200
+    assert b'data-section="Dairy"' in resp.data
+
+
+def test_staple_list_items_without_section_have_empty_data_section(logged_in_client, app):
+    with app.app_context():
+        db.session.add(StapleItem(name='Eggs'))
+        db.session.commit()
+    resp = logged_in_client.get('/grocery/')
+    assert resp.status_code == 200
+    assert b'data-section=""' in resp.data
+
+
+def test_sort_toggle_buttons_present(logged_in_client):
+    resp = logged_in_client.get('/grocery/')
+    assert resp.status_code == 200
+    assert b'sort-az' in resp.data
+    assert b'sort-section' in resp.data
+
+
 # --- edit section name (issue #3) ---
 
 def test_edit_section_renames_section(logged_in_client, app):
