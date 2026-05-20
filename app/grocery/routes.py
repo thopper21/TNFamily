@@ -86,22 +86,41 @@ def add_to_list():
     return jsonify({'ok': True, 'id': item.id, 'shopping_count': ShoppingListItem.query.count()})
 
 
+@grocery_bp.route('/shop')
+@login_required
+def shop():
+    items = ShoppingListItem.query.order_by(ShoppingListItem.checked, ShoppingListItem.name).all()
+    section_map = {}
+    unsectioned = []
+    for item in items:
+        if item.section_id:
+            if item.section_id not in section_map:
+                section_map[item.section_id] = (item.section, [])
+            section_map[item.section_id][1].append(item)
+        else:
+            unsectioned.append(item)
+    grouped = sorted(section_map.values(), key=lambda x: x[0].name)
+    return render_template('grocery/shop.html', grouped=grouped, unsectioned=unsectioned)
+
+
 @grocery_bp.route('/list/<int:item_id>/toggle', methods=['POST'])
 @login_required
 def toggle_list_item(item_id):
-    return jsonify({'ok': True}), 200
+    item = db.session.get(ShoppingListItem, item_id)
+    if not item:
+        return jsonify({'ok': False, 'error': 'Not found'}), 404
+    item.checked = not item.checked
+    db.session.commit()
+    return jsonify({'ok': True, 'checked': item.checked})
 
 
 @grocery_bp.route('/list/done', methods=['POST'])
 @login_required
 def done_shopping():
+    ShoppingListItem.query.delete(synchronize_session=False)
+    StapleItem.query.update({'on_shopping_list': False}, synchronize_session=False)
+    db.session.commit()
     return redirect(url_for('grocery.index'))
-
-
-@grocery_bp.route('/shop')
-@login_required
-def shop():
-    return 'OK', 200
 
 
 @grocery_bp.route('/sections')

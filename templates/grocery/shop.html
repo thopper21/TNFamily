@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Shopping — {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h2 class="mb-0">Shopping List</h2>
+  {% if grouped or unsectioned %}
+  <form method="post" action="{{ url_for('grocery.done_shopping') }}"
+        onsubmit="return confirm('Mark shopping as done? This will clear your list.')">
+    <button type="submit" class="btn btn-success">Done Shopping ✓</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if not grouped and not unsectioned %}
+<p class="text-muted">
+  Your shopping list is empty. <a href="{{ url_for('grocery.index') }}">Add some items</a>.
+</p>
+{% else %}
+<div class="accordion" id="shopping-accordion">
+  {% for section, items in grouped %}
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="heading-{{ section.id }}">
+      <button class="accordion-button" type="button"
+              data-bs-toggle="collapse" data-bs-target="#collapse-{{ section.id }}"
+              aria-expanded="true" aria-controls="collapse-{{ section.id }}">
+        {{ section.name }}
+        <span class="badge bg-secondary ms-2" id="badge-{{ section.id }}">
+          {{ items | selectattr('checked', 'equalto', False) | list | length }}
+        </span>
+      </button>
+    </h2>
+    <div id="collapse-{{ section.id }}" class="accordion-collapse collapse show"
+         aria-labelledby="heading-{{ section.id }}">
+      <div class="accordion-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for item in items %}
+          <li class="list-group-item d-flex align-items-center gap-2 {% if item.checked %}text-muted{% endif %}"
+              id="list-item-{{ item.id }}" style="cursor:pointer"
+              onclick="toggleListItem({{ item.id }}, this, 'badge-{{ section.id }}')">
+            <input type="checkbox" class="form-check-input flex-shrink-0"
+                   {% if item.checked %}checked{% endif %}
+                   onclick="event.stopPropagation()">
+            <span class="{% if item.checked %}text-decoration-line-through{% endif %}">{{ item.name }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  {% if unsectioned %}
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="heading-other">
+      <button class="accordion-button" type="button"
+              data-bs-toggle="collapse" data-bs-target="#collapse-other"
+              aria-expanded="true" aria-controls="collapse-other">
+        Other
+        <span class="badge bg-secondary ms-2" id="badge-other">
+          {{ unsectioned | selectattr('checked', 'equalto', False) | list | length }}
+        </span>
+      </button>
+    </h2>
+    <div id="collapse-other" class="accordion-collapse collapse show" aria-labelledby="heading-other">
+      <div class="accordion-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for item in unsectioned %}
+          <li class="list-group-item d-flex align-items-center gap-2 {% if item.checked %}text-muted{% endif %}"
+              id="list-item-{{ item.id }}" style="cursor:pointer"
+              onclick="toggleListItem({{ item.id }}, this, 'badge-other')">
+            <input type="checkbox" class="form-check-input flex-shrink-0"
+                   {% if item.checked %}checked{% endif %}
+                   onclick="event.stopPropagation()">
+            <span class="{% if item.checked %}text-decoration-line-through{% endif %}">{{ item.name }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<script>
+const GROCERY_BASE = {{ url_for('grocery.index') | tojson }};
+function toggleItemUrl(id) { return GROCERY_BASE + 'list/' + id + '/toggle'; }
+
+async function toggleListItem(itemId, row, badgeId) {
+  const checkbox = row.querySelector('input[type="checkbox"]');
+  const wasChecked = checkbox.checked;
+  try {
+    const resp = await fetch(toggleItemUrl(itemId), {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error);
+    const nameEl = row.querySelector('span');
+    const list = row.parentElement;
+    if (data.checked) {
+      row.classList.add('text-muted');
+      nameEl.classList.add('text-decoration-line-through');
+      checkbox.checked = true;
+      list.appendChild(row);
+    } else {
+      row.classList.remove('text-muted');
+      nameEl.classList.remove('text-decoration-line-through');
+      checkbox.checked = false;
+      list.prepend(row);
+    }
+    const badge = document.getElementById(badgeId);
+    if (badge) {
+      badge.textContent = list.querySelectorAll('input[type="checkbox"]:not(:checked)').length;
+    }
+  } catch (e) {
+    checkbox.checked = wasChecked;
+    alert('Something went wrong. Please try again.');
+  }
+}
+</script>
+{% endblock %}

@@ -204,3 +204,66 @@ def test_add_one_off_item(logged_in_client, app):
 def test_add_one_off_item_missing_name_returns_400(logged_in_client):
     resp = logged_in_client.post('/grocery/list/add', json={'name': ''})
     assert resp.status_code == 400
+
+
+def test_shop_view_returns_200(logged_in_client):
+    resp = logged_in_client.get('/grocery/shop')
+    assert resp.status_code == 200
+
+
+def test_shop_view_groups_items_by_section(logged_in_client, app):
+    with app.app_context():
+        section = StoreSection(name='Produce')
+        db.session.add(section)
+        db.session.flush()
+        db.session.add(ShoppingListItem(name='Apples', section_id=section.id))
+        db.session.add(ShoppingListItem(name='Bread'))
+        db.session.commit()
+    resp = logged_in_client.get('/grocery/shop')
+    assert resp.status_code == 200
+    assert b'Produce' in resp.data
+    assert b'Apples' in resp.data
+    assert b'Bread' in resp.data
+
+
+def test_toggle_list_item(logged_in_client, app):
+    with app.app_context():
+        item = ShoppingListItem(name='Bread')
+        db.session.add(item)
+        db.session.commit()
+        item_id = item.id
+    resp = logged_in_client.post(f'/grocery/list/{item_id}/toggle')
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['ok'] is True
+    assert data['checked'] is True
+    with app.app_context():
+        assert db.session.get(ShoppingListItem, item_id).checked is True
+
+
+def test_toggle_list_item_twice_unchecks(logged_in_client, app):
+    with app.app_context():
+        item = ShoppingListItem(name='Bread', checked=True)
+        db.session.add(item)
+        db.session.commit()
+        item_id = item.id
+    resp = logged_in_client.post(f'/grocery/list/{item_id}/toggle')
+    assert resp.get_json()['checked'] is False
+    with app.app_context():
+        assert db.session.get(ShoppingListItem, item_id).checked is False
+
+
+def test_done_shopping_clears_list_and_resets_staples(logged_in_client, app):
+    with app.app_context():
+        staple = StapleItem(name='Milk', on_shopping_list=True)
+        db.session.add(staple)
+        db.session.flush()
+        db.session.add(ShoppingListItem(name='Milk', staple_item_id=staple.id))
+        db.session.add(ShoppingListItem(name='Sriracha'))
+        db.session.commit()
+        staple_id = staple.id
+    resp = logged_in_client.post('/grocery/list/done')
+    assert resp.status_code == 302
+    with app.app_context():
+        assert ShoppingListItem.query.count() == 0
+        assert db.session.get(StapleItem, staple_id).on_shopping_list is False
