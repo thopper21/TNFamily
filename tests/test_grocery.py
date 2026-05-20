@@ -253,6 +253,12 @@ def test_toggle_list_item_twice_unchecks(logged_in_client, app):
         assert db.session.get(ShoppingListItem, item_id).checked is False
 
 
+def test_toggle_list_item_not_found_returns_404(logged_in_client):
+    resp = logged_in_client.post('/grocery/list/9999/toggle')
+    assert resp.status_code == 404
+    assert resp.get_json()['ok'] is False
+
+
 def test_done_shopping_clears_list_and_resets_staples(logged_in_client, app):
     with app.app_context():
         staple = StapleItem(name='Milk', on_shopping_list=True)
