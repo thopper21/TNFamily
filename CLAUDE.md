@@ -48,6 +48,10 @@ Dynamic names in JS strings (e.g. `confirm()` dialogs) use `| tojson`, not `| e`
 
 **Test fixtures** (`tests/conftest.py`): Three fixtures — `app` (creates in-memory SQLite DB, tears down after each test), `client` (unauthenticated test client), `logged_in_client` (pre-seeds a `User` and sets the Flask-Login session).
 
+## Housekeeping
+
+After any significant change (new blueprint, new models, new routes, schema changes), update `README.md` to reflect the new state — project structure, environment variables, or architecture notes as appropriate.
+
 ## Schema notes
 
 - `db.create_all()` is used (no migrations). Before adding columns to existing tables in production, integrate Flask-Migrate.
