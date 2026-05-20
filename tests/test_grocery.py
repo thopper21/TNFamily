@@ -485,3 +485,17 @@ def test_staple_not_on_list_no_on_list_badge(logged_in_client, app):
     assert resp.status_code == 200
     # Check the rendered element, not just the string (which also appears in JS source)
     assert b'staple-on-list-badge">On list' not in resp.data
+
+
+# --- sections XSS safety ---
+
+def test_sections_page_escapes_html_in_section_names(logged_in_client, app):
+    with app.app_context():
+        db.session.add(StoreSection(name='<script>alert(1)</script>'))
+        db.session.commit()
+    resp = logged_in_client.get('/grocery/sections')
+    assert resp.status_code == 200
+    assert b'<script>alert(1)</script>' not in resp.data
+    assert b'&lt;script&gt;' in resp.data
+
+

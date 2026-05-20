@@ -145,21 +145,54 @@ document.getElementById('add-section-form').addEventListener('submit', async (e)
     const li = document.createElement('li');
     li.className = 'list-group-item d-flex justify-content-between align-items-center gap-2';
     li.id = 'section-row-' + data.id;
-    li.innerHTML = `
-      <span class="section-name flex-grow-1">${data.name}</span>
-      <input type="text" class="form-control form-control-sm section-edit-input d-none flex-grow-1"
-             value="${data.name}" data-id="${data.id}">
-      <div class="d-flex gap-1">
-        <button class="btn btn-sm btn-outline-secondary btn-edit">Edit</button>
-        <button class="btn btn-sm btn-success btn-save d-none">Save</button>
-        <button class="btn btn-sm btn-outline-secondary btn-cancel d-none">Cancel</button>
-        <form method="post" action="${deleteSectionUrl(data.id)}">
-          <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-        </form>
-      </div>`;
-    li.querySelector('form').addEventListener('submit', (ev) => {
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'section-name flex-grow-1';
+    nameSpan.textContent = data.name;
+
+    const editInput = document.createElement('input');
+    editInput.type = 'text';
+    editInput.className = 'form-control form-control-sm section-edit-input d-none flex-grow-1';
+    editInput.value = data.name;
+    editInput.dataset.id = data.id;
+
+    const btnEdit = document.createElement('button');
+    btnEdit.type = 'button';
+    btnEdit.className = 'btn btn-sm btn-outline-secondary btn-edit';
+    btnEdit.textContent = 'Edit';
+
+    const btnSave = document.createElement('button');
+    btnSave.type = 'button';
+    btnSave.className = 'btn btn-sm btn-success btn-save d-none';
+    btnSave.textContent = 'Save';
+
+    const btnCancel = document.createElement('button');
+    btnCancel.type = 'button';
+    btnCancel.className = 'btn btn-sm btn-outline-secondary btn-cancel d-none';
+    btnCancel.textContent = 'Cancel';
+
+    const delForm = document.createElement('form');
+    delForm.method = 'post';
+    delForm.action = deleteSectionUrl(data.id);
+    delForm.addEventListener('submit', (ev) => {
       if (!confirm('Delete this section? Items will lose their section.')) ev.preventDefault();
     });
+    const delBtn = document.createElement('button');
+    delBtn.type = 'submit';
+    delBtn.className = 'btn btn-sm btn-outline-danger';
+    delBtn.textContent = 'Delete';
+    delForm.appendChild(delBtn);
+
+    const btnGroup = document.createElement('div');
+    btnGroup.className = 'd-flex gap-1';
+    btnGroup.appendChild(btnEdit);
+    btnGroup.appendChild(btnSave);
+    btnGroup.appendChild(btnCancel);
+    btnGroup.appendChild(delForm);
+
+    li.appendChild(nameSpan);
+    li.appendChild(editInput);
+    li.appendChild(btnGroup);
     wireEditButtons(li, data.id);
     document.getElementById('sections-list').appendChild(li);
     nameInput.value = '';
