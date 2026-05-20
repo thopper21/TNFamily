@@ -25,6 +25,8 @@ def add_staple():
     if not name:
         return jsonify({'ok': False, 'error': 'Name is required'}), 400
     section_id = data.get('section_id') or None
+    if section_id and not db.session.get(StoreSection, section_id):
+        return jsonify({'ok': False, 'error': 'Section not found'}), 400
     staple = StapleItem(name=name, section_id=section_id)
     db.session.add(staple)
     db.session.commit()
@@ -80,6 +82,8 @@ def add_to_list():
     if not name:
         return jsonify({'ok': False, 'error': 'Name is required'}), 400
     section_id = data.get('section_id') or None
+    if section_id and not db.session.get(StoreSection, section_id):
+        return jsonify({'ok': False, 'error': 'Section not found'}), 400
     item = ShoppingListItem(name=name, section_id=section_id)
     db.session.add(item)
     db.session.commit()
@@ -93,7 +97,7 @@ def shop():
     section_map = {}
     unsectioned = []
     for item in items:
-        if item.section_id:
+        if item.section_id and item.section:
             if item.section_id not in section_map:
                 section_map[item.section_id] = (item.section, [])
             section_map[item.section_id][1].append(item)

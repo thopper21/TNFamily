@@ -273,3 +273,15 @@ def test_done_shopping_clears_list_and_resets_staples(logged_in_client, app):
     with app.app_context():
         assert ShoppingListItem.query.count() == 0
         assert db.session.get(StapleItem, staple_id).on_shopping_list is False
+
+
+def test_add_staple_invalid_section_returns_400(logged_in_client):
+    resp = logged_in_client.post('/grocery/staples', json={'name': 'Eggs', 'section_id': 9999})
+    assert resp.status_code == 400
+    assert resp.get_json()['ok'] is False
+
+
+def test_add_one_off_item_invalid_section_returns_400(logged_in_client):
+    resp = logged_in_client.post('/grocery/list/add', json={'name': 'Sriracha', 'section_id': 9999})
+    assert resp.status_code == 400
+    assert resp.get_json()['ok'] is False

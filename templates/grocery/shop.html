@@ -40,7 +40,8 @@
               onclick="toggleListItem({{ item.id }}, this, 'badge-{{ section.id }}')">
             <input type="checkbox" class="form-check-input flex-shrink-0"
                    {% if item.checked %}checked{% endif %}
-                   onclick="event.stopPropagation()">
+                   onclick="event.stopPropagation()"
+                   onchange="toggleListItem({{ item.id }}, this.closest('li'), 'badge-{{ section.id }}')">
             <span class="{% if item.checked %}text-decoration-line-through{% endif %}">{{ item.name }}</span>
           </li>
           {% endfor %}
@@ -71,7 +72,8 @@
               onclick="toggleListItem({{ item.id }}, this, 'badge-other')">
             <input type="checkbox" class="form-check-input flex-shrink-0"
                    {% if item.checked %}checked{% endif %}
-                   onclick="event.stopPropagation()">
+                   onclick="event.stopPropagation()"
+                   onchange="toggleListItem({{ item.id }}, this.closest('li'), 'badge-other')">
             <span class="{% if item.checked %}text-decoration-line-through{% endif %}">{{ item.name }}</span>
           </li>
           {% endfor %}
@@ -83,9 +85,24 @@
 </div>
 {% endif %}
 
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="error-toast" class="toast" role="alert">
+    <div class="toast-header bg-danger text-white">
+      <strong class="me-auto">Error</strong>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body" id="error-toast-body"></div>
+  </div>
+</div>
+
 <script>
 const GROCERY_BASE = {{ url_for('grocery.index') | tojson }};
 function toggleItemUrl(id) { return GROCERY_BASE + 'list/' + id + '/toggle'; }
+
+function showError(msg) {
+  document.getElementById('error-toast-body').textContent = msg;
+  new bootstrap.Toast(document.getElementById('error-toast')).show();
+}
 
 async function toggleListItem(itemId, row, badgeId) {
   const checkbox = row.querySelector('input[type="checkbox"]');
@@ -116,7 +133,7 @@ async function toggleListItem(itemId, row, badgeId) {
     }
   } catch (e) {
     checkbox.checked = wasChecked;
-    alert('Something went wrong. Please try again.');
+    showError(e.message || 'Something went wrong. Please try again.');
   }
 }
 </script>
