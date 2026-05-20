@@ -20,11 +20,10 @@ Three new models added to `app/models.py`:
 
 ### `StoreSection`
 ```
-id           Integer, primary key
-name         String(128), unique, not null
-sort_order   Integer, not null, default 0
+id    Integer, primary key
+name  String(128), unique, not null
 ```
-The user-managed catalog of grocery store sections (e.g. "Produce", "Dairy"). Infrequently created or deleted via the section management page.
+The user-managed catalog of grocery store sections (e.g. "Produce", "Dairy"). Sections are displayed in alphabetical order. Infrequently created or deleted via the section management page.
 
 ### `StapleItem`
 ```
@@ -95,11 +94,10 @@ Two panels — side by side on desktop (Bootstrap `col-md-6`), stacked on mobile
 
 Optimised for phone use in-store.
 
-- A "Done Shopping" button at the top submits `POST /grocery/list/done` (standard form POST, redirects to `/grocery/shop` which will be empty, or to `/grocery/`).
+- A "Done Shopping" button at the top submits `POST /grocery/list/done` (standard form POST, redirects to `/grocery/`).
 - Items grouped by section, each section rendered as a Bootstrap 5 accordion panel, all expanded by default. Items with no section appear in an "Other" group at the bottom.
 - Within each panel, unchecked items appear first; checked items are crossed out (`text-decoration: line-through`), faded (`opacity: 0.5`), and sorted to the bottom.
 - Tapping an item row calls `POST /grocery/list/<id>/toggle` via `fetch` and re-sorts the row client-side.
-- Each item row displays its name and a small section badge.
 
 ### Section management (`/grocery/sections`)
 
