@@ -12,3 +12,8 @@ def test_home_redirects_unauthenticated_to_login(client):
     response = client.get('/')
     assert response.status_code == 302
     assert '/auth/login' in response.headers['Location']
+
+
+def test_page_has_favicon_link(logged_in_client):
+    response = logged_in_client.get('/')
+    assert b'rel="icon"' in response.data

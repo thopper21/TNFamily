@@ -449,3 +449,34 @@ def test_edit_section_requires_login(client, app):
     resp = client.post(f'/grocery/sections/{section_id}/edit', json={'name': 'Frozen'})
     assert resp.status_code == 302
     assert '/auth/login' in resp.headers['Location']
+
+
+# --- staple on-list indicator (issue #2) ---
+
+def test_staple_on_list_shows_on_list_badge(logged_in_client, app):
+    with app.app_context():
+        staple = StapleItem(name='Milk', on_shopping_list=True)
+        db.session.add(staple)
+        db.session.commit()
+    resp = logged_in_client.get('/grocery/')
+    assert resp.status_code == 200
+    assert b'On list' in resp.data
+
+
+def test_staple_on_list_no_strikethrough(logged_in_client, app):
+    with app.app_context():
+        staple = StapleItem(name='Milk', on_shopping_list=True)
+        db.session.add(staple)
+        db.session.commit()
+    resp = logged_in_client.get('/grocery/')
+    assert b'text-decoration-line-through' not in resp.data
+
+
+def test_staple_not_on_list_no_on_list_badge(logged_in_client, app):
+    with app.app_context():
+        db.session.add(StapleItem(name='Eggs'))
+        db.session.commit()
+    resp = logged_in_client.get('/grocery/')
+    assert resp.status_code == 200
+    # Check the rendered element, not just the string (which also appears in JS source)
+    assert b'staple-on-list-badge">On list' not in resp.data

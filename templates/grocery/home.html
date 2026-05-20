@@ -21,16 +21,17 @@
       <div class="card-body p-0">
         <ul class="list-group list-group-flush" id="staples-list">
           {% for staple in staples %}
-          <li class="list-group-item d-flex align-items-center gap-2 {% if staple.on_shopping_list %}text-muted{% endif %}"
+          <li class="list-group-item d-flex align-items-center gap-2"
               id="staple-{{ staple.id }}"
               data-name="{{ staple.name }}"
               data-section="{{ staple.section.name if staple.section else '' }}">
             <input type="checkbox" class="form-check-input flex-shrink-0"
                    {% if staple.on_shopping_list %}checked{% endif %}
                    onchange="toggleStaple({{ staple.id }}, this)">
-            <span class="flex-grow-1 {% if staple.on_shopping_list %}text-decoration-line-through{% endif %}">
-              {{ staple.name }}
-            </span>
+            <span class="flex-grow-1">{{ staple.name }}</span>
+            {% if staple.on_shopping_list %}
+            <span class="badge bg-success staple-on-list-badge">On list</span>
+            {% endif %}
             {% if staple.section %}
             <span class="badge bg-secondary">{{ staple.section.name }}</span>
             {% endif %}
@@ -173,14 +174,19 @@ async function toggleStaple(stapleId, checkbox) {
     });
     const data = await resp.json();
     if (!data.ok) throw new Error(data.error);
-    const nameEl = row.querySelector('span.flex-grow-1');
+    const list = document.getElementById('staples-list');
+    let badge = row.querySelector('.staple-on-list-badge');
     if (data.on_shopping_list) {
-      row.classList.add('text-muted');
-      nameEl.classList.add('text-decoration-line-through');
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'badge bg-success staple-on-list-badge';
+        badge.textContent = 'On list';
+        const nameEl = row.querySelector('span.flex-grow-1');
+        nameEl.insertAdjacentElement('afterend', badge);
+      }
       checkbox.checked = true;
     } else {
-      row.classList.remove('text-muted');
-      nameEl.classList.remove('text-decoration-line-through');
+      if (badge) badge.remove();
       checkbox.checked = false;
     }
     applySortToList();
