@@ -80,9 +80,10 @@ TNFamily/
 ├── app/
 │   ├── __init__.py       # Application factory
 │   ├── extensions.py     # Shared Flask extensions (db, login_manager, oauth)
-│   ├── models.py         # SQLAlchemy models
+│   ├── models.py         # SQLAlchemy models (User, StoreSection, StapleItem, ShoppingListItem)
 │   ├── auth/             # Google OAuth blueprint (/auth/*)
-│   └── home/             # Home page blueprint (/)
+│   ├── home/             # Home page blueprint (/)
+│   └── grocery/          # Grocery list blueprint (/grocery/*)
 ├── templates/            # Jinja2 + Bootstrap 5 templates
 ├── tests/                # pytest test suite
 ├── config.py             # Environment-based configuration
