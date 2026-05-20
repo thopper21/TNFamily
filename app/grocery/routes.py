@@ -1,6 +1,7 @@
 # app/grocery/routes.py
 from flask import render_template, request, jsonify, redirect, url_for
 from flask_login import login_required
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import joinedload
 from app.grocery import grocery_bp
 from app.extensions import db
@@ -11,20 +12,20 @@ from app.models import StoreSection, StapleItem, ShoppingListItem
 @login_required
 def index():
     staples = (
-        StapleItem.query
-        .options(joinedload(StapleItem.shopping_list_item))
-        .order_by(StapleItem.name)
-        .all()
+        db.session.scalars(
+            select(StapleItem)
+            .options(joinedload(StapleItem.shopping_list_item))
+            .order_by(StapleItem.name)
+        ).unique().all()
     )
     staples.sort(key=lambda s: s.shopping_list_item is not None)
-    sections = StoreSection.query.order_by(StoreSection.name).all()
-    shopping_count = ShoppingListItem.query.count()
-    ad_hoc_items = (
-        ShoppingListItem.query
-        .filter_by(staple_item_id=None)
+    sections = db.session.scalars(select(StoreSection).order_by(StoreSection.name)).all()
+    shopping_count = db.session.scalar(select(func.count()).select_from(ShoppingListItem))
+    ad_hoc_items = db.session.scalars(
+        select(ShoppingListItem)
+        .where(ShoppingListItem.staple_item_id == None)  # noqa: E711
         .order_by(ShoppingListItem.created_at.desc())
-        .all()
-    )
+    ).all()
     return render_template(
         'grocery/home.html',
         staples=staples,
@@ -81,7 +82,7 @@ def toggle_staple(staple_id):
     return jsonify({
         'ok': True,
         'on_shopping_list': staple.shopping_list_item is not None,
-        'shopping_count': ShoppingListItem.query.count(),
+        'shopping_count': db.session.scalar(select(func.count()).select_from(ShoppingListItem)),
     })
 
 
@@ -108,13 +109,13 @@ def add_to_list():
     item = ShoppingListItem(name=name, section_id=section_id)
     db.session.add(item)
     db.session.commit()
-    return jsonify({'ok': True, 'id': item.id, 'shopping_count': ShoppingListItem.query.count()})
+    return jsonify({'ok': True, 'id': item.id, 'shopping_count': db.session.scalar(select(func.count()).select_from(ShoppingListItem))})
 
 
 @grocery_bp.route('/shop')
 @login_required
 def shop():
-    items = ShoppingListItem.query.order_by(ShoppingListItem.checked, ShoppingListItem.name).all()
+    items = db.session.scalars(select(ShoppingListItem).order_by(ShoppingListItem.checked, ShoppingListItem.name)).all()
     section_map = {}
     unsectioned = []
     for item in items:
@@ -136,7 +137,7 @@ def delete_list_item(item_id):
         return jsonify({'ok': False, 'error': 'Not found'}), 404
     db.session.delete(item)
     db.session.commit()
-    return jsonify({'ok': True, 'shopping_count': ShoppingListItem.query.count()})
+    return jsonify({'ok': True, 'shopping_count': db.session.scalar(select(func.count()).select_from(ShoppingListItem))})
 
 
 @grocery_bp.route('/list/<int:item_id>/toggle', methods=['POST'])
@@ -153,7 +154,7 @@ def toggle_list_item(item_id):
 @grocery_bp.route('/list/done', methods=['POST'])
 @login_required
 def done_shopping():
-    ShoppingListItem.query.delete(synchronize_session=False)
+    db.session.execute(delete(ShoppingListItem))
     db.session.commit()
     return redirect(url_for('grocery.index'))
 
@@ -161,7 +162,7 @@ def done_shopping():
 @grocery_bp.route('/sections')
 @login_required
 def sections():
-    all_sections = StoreSection.query.order_by(StoreSection.name).all()
+    all_sections = db.session.scalars(select(StoreSection).order_by(StoreSection.name)).all()
     return render_template('grocery/sections.html', sections=all_sections)
 
 
@@ -172,7 +173,7 @@ def add_section():
     name = (data.get('name') or '').strip()
     if not name:
         return jsonify({'ok': False, 'error': 'Name is required'}), 400
-    if StoreSection.query.filter_by(name=name).first():
+    if db.session.scalar(select(StoreSection).where(StoreSection.name == name)):
         return jsonify({'ok': False, 'error': 'Section already exists'}), 409
     section = StoreSection(name=name)
     db.session.add(section)
@@ -190,7 +191,7 @@ def edit_section(section_id):
     name = (data.get('name') or '').strip()
     if not name:
         return jsonify({'ok': False, 'error': 'Name is required'}), 400
-    if name != section.name and StoreSection.query.filter_by(name=name).first():
+    if name != section.name and db.session.scalar(select(StoreSection).where(StoreSection.name == name)):
         return jsonify({'ok': False, 'error': 'Section already exists'}), 409
     section.name = name
     db.session.commit()
@@ -202,8 +203,8 @@ def edit_section(section_id):
 def delete_section(section_id):
     section = db.session.get(StoreSection, section_id)
     if section:
-        StapleItem.query.filter_by(section_id=section_id).update({'section_id': None})
-        ShoppingListItem.query.filter_by(section_id=section_id).update({'section_id': None})
+        db.session.execute(update(StapleItem).where(StapleItem.section_id == section_id).values(section_id=None))
+        db.session.execute(update(ShoppingListItem).where(ShoppingListItem.section_id == section_id).values(section_id=None))
         db.session.delete(section)
         db.session.commit()
     return redirect(url_for('grocery.sections'))
