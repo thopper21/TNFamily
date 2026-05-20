@@ -27,6 +27,14 @@ def index():
     )
 
 
+def _resolve_section_id(data):
+    """Returns (section_id, error) — error is a (response, status) tuple or None."""
+    section_id = data.get('section_id') or None
+    if section_id and not db.session.get(StoreSection, section_id):
+        return None, (jsonify({'ok': False, 'error': 'Section not found'}), 400)
+    return section_id, None
+
+
 @grocery_bp.route('/staples', methods=['POST'])
 @login_required
 def add_staple():
@@ -34,9 +42,9 @@ def add_staple():
     name = (data.get('name') or '').strip()
     if not name:
         return jsonify({'ok': False, 'error': 'Name is required'}), 400
-    section_id = data.get('section_id') or None
-    if section_id and not db.session.get(StoreSection, section_id):
-        return jsonify({'ok': False, 'error': 'Section not found'}), 400
+    section_id, err = _resolve_section_id(data)
+    if err:
+        return err
     staple = StapleItem(name=name, section_id=section_id)
     db.session.add(staple)
     db.session.commit()
@@ -91,9 +99,9 @@ def add_to_list():
     name = (data.get('name') or '').strip()
     if not name:
         return jsonify({'ok': False, 'error': 'Name is required'}), 400
-    section_id = data.get('section_id') or None
-    if section_id and not db.session.get(StoreSection, section_id):
-        return jsonify({'ok': False, 'error': 'Section not found'}), 400
+    section_id, err = _resolve_section_id(data)
+    if err:
+        return err
     item = ShoppingListItem(name=name, section_id=section_id)
     db.session.add(item)
     db.session.commit()
