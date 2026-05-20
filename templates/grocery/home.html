@@ -27,7 +27,7 @@
             <span class="badge bg-secondary">{{ staple.section.name }}</span>
             {% endif %}
             <form method="post" action="{{ url_for('grocery.delete_staple', staple_id=staple.id) }}"
-                  onsubmit="return confirm('Delete {{ staple.name | e }}?')">
+                  onsubmit="return confirm('Delete ' + {{ staple.name | tojson }} + '?')">
               <button type="submit" class="btn btn-sm btn-outline-danger py-0">×</button>
             </form>
           </li>
@@ -90,13 +90,13 @@
 </div>
 
 <script>
-const TOGGLE_STAPLE_BASE = {{ url_for('grocery.toggle_staple', staple_id=0) | tojson }};
+const TOGGLE_STAPLE_URL = {{ url_for('grocery.toggle_staple', staple_id=0) | tojson }};
 const ADD_STAPLE_URL = {{ url_for('grocery.add_staple') | tojson }};
-const DELETE_STAPLE_BASE = {{ url_for('grocery.delete_staple', staple_id=0) | tojson }};
+const DELETE_STAPLE_URL = {{ url_for('grocery.delete_staple', staple_id=0) | tojson }};
 const ADD_TO_LIST_URL = {{ url_for('grocery.add_to_list') | tojson }};
 
-function toggleStapleUrl(id) { return TOGGLE_STAPLE_BASE.replace('/0/', '/' + id + '/'); }
-function deleteStapleUrl(id) { return DELETE_STAPLE_BASE.replace('/0/', '/' + id + '/'); }
+function toggleStapleUrl(id) { return TOGGLE_STAPLE_URL.replace('staples/0/', 'staples/' + id + '/'); }
+function deleteStapleUrl(id) { return DELETE_STAPLE_URL.replace('staples/0/', 'staples/' + id + '/'); }
 
 function showError(msg) {
   document.getElementById('error-toast-body').textContent = msg;
