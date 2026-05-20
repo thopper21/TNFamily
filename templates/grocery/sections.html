@@ -11,13 +11,20 @@
     <div class="card shadow-sm">
       <ul class="list-group list-group-flush" id="sections-list">
         {% for section in sections %}
-        <li class="list-group-item d-flex justify-content-between align-items-center"
+        <li class="list-group-item d-flex justify-content-between align-items-center gap-2"
             id="section-row-{{ section.id }}">
-          <span>{{ section.name }}</span>
-          <form method="post" action="{{ url_for('grocery.delete_section', section_id=section.id) }}"
-                onsubmit="return confirm('Delete this section? Items will lose their section.')">
-            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-          </form>
+          <span class="section-name flex-grow-1">{{ section.name }}</span>
+          <input type="text" class="form-control form-control-sm section-edit-input d-none flex-grow-1"
+                 value="{{ section.name }}" data-id="{{ section.id }}">
+          <div class="d-flex gap-1">
+            <button class="btn btn-sm btn-outline-secondary btn-edit">Edit</button>
+            <button class="btn btn-sm btn-success btn-save d-none">Save</button>
+            <button class="btn btn-sm btn-outline-secondary btn-cancel d-none">Cancel</button>
+            <form method="post" action="{{ url_for('grocery.delete_section', section_id=section.id) }}"
+                  onsubmit="return confirm('Delete this section? Items will lose their section.')">
+              <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+            </form>
+          </div>
         </li>
         {% endfor %}
       </ul>
@@ -45,15 +52,82 @@
 <script>
 const ADD_SECTION_URL = {{ url_for('grocery.add_section') | tojson }};
 const DELETE_SECTION_BASE_URL = {{ url_for('grocery.delete_section', section_id=0) | tojson }};
+const EDIT_SECTION_BASE_URL = {{ url_for('grocery.edit_section', section_id=0) | tojson }};
 
 function deleteSectionUrl(id) {
   return DELETE_SECTION_BASE_URL.replace('/0/', '/' + id + '/');
+}
+
+function editSectionUrl(id) {
+  return EDIT_SECTION_BASE_URL.replace('/0/', '/' + id + '/');
 }
 
 function showError(msg) {
   document.getElementById('error-toast-body').textContent = msg;
   new bootstrap.Toast(document.getElementById('error-toast')).show();
 }
+
+function wireEditButtons(li, sectionId) {
+  const nameSpan = li.querySelector('.section-name');
+  const editInput = li.querySelector('.section-edit-input');
+  const btnEdit = li.querySelector('.btn-edit');
+  const btnSave = li.querySelector('.btn-save');
+  const btnCancel = li.querySelector('.btn-cancel');
+
+  btnEdit.addEventListener('click', () => {
+    nameSpan.classList.add('d-none');
+    editInput.classList.remove('d-none');
+    btnEdit.classList.add('d-none');
+    btnSave.classList.remove('d-none');
+    btnCancel.classList.remove('d-none');
+    editInput.focus();
+    editInput.select();
+  });
+
+  btnCancel.addEventListener('click', () => {
+    editInput.value = nameSpan.textContent;
+    nameSpan.classList.remove('d-none');
+    editInput.classList.add('d-none');
+    btnEdit.classList.remove('d-none');
+    btnSave.classList.add('d-none');
+    btnCancel.classList.add('d-none');
+  });
+
+  async function saveEdit() {
+    const newName = editInput.value.trim();
+    if (!newName) return;
+    try {
+      const resp = await fetch(editSectionUrl(sectionId), {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: newName}),
+      });
+      const data = await resp.json();
+      if (!data.ok) throw new Error(data.error);
+      nameSpan.textContent = data.name;
+      editInput.value = data.name;
+      nameSpan.classList.remove('d-none');
+      editInput.classList.add('d-none');
+      btnEdit.classList.remove('d-none');
+      btnSave.classList.add('d-none');
+      btnCancel.classList.add('d-none');
+    } catch (e) {
+      showError(e.message || 'Something went wrong');
+    }
+  }
+
+  btnSave.addEventListener('click', saveEdit);
+  editInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveEdit();
+    if (e.key === 'Escape') btnCancel.click();
+  });
+}
+
+// Wire up existing rows on page load
+document.querySelectorAll('#sections-list li[id^="section-row-"]').forEach((li) => {
+  const sectionId = parseInt(li.id.replace('section-row-', ''), 10);
+  wireEditButtons(li, sectionId);
+});
 
 document.getElementById('add-section-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -68,24 +142,26 @@ document.getElementById('add-section-form').addEventListener('submit', async (e)
     });
     const data = await resp.json();
     if (!data.ok) throw new Error(data.error);
+
     const li = document.createElement('li');
-    li.className = 'list-group-item d-flex justify-content-between align-items-center';
+    li.className = 'list-group-item d-flex justify-content-between align-items-center gap-2';
     li.id = 'section-row-' + data.id;
-    const nameSpan = document.createElement('span');
-    nameSpan.textContent = data.name;
-    const form = document.createElement('form');
-    form.method = 'post';
-    form.action = deleteSectionUrl(data.id);
-    form.addEventListener('submit', (ev) => {
+    li.innerHTML = `
+      <span class="section-name flex-grow-1">${data.name}</span>
+      <input type="text" class="form-control form-control-sm section-edit-input d-none flex-grow-1"
+             value="${data.name}" data-id="${data.id}">
+      <div class="d-flex gap-1">
+        <button class="btn btn-sm btn-outline-secondary btn-edit">Edit</button>
+        <button class="btn btn-sm btn-success btn-save d-none">Save</button>
+        <button class="btn btn-sm btn-outline-secondary btn-cancel d-none">Cancel</button>
+        <form method="post" action="${deleteSectionUrl(data.id)}">
+          <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+        </form>
+      </div>`;
+    li.querySelector('form').addEventListener('submit', (ev) => {
       if (!confirm('Delete this section? Items will lose their section.')) ev.preventDefault();
     });
-    const btn = document.createElement('button');
-    btn.type = 'submit';
-    btn.className = 'btn btn-sm btn-outline-danger';
-    btn.textContent = 'Delete';
-    form.appendChild(btn);
-    li.appendChild(nameSpan);
-    li.appendChild(form);
+    wireEditButtons(li, data.id);
     document.getElementById('sections-list').appendChild(li);
     nameInput.value = '';
   } catch (e) {
