@@ -90,13 +90,12 @@
 </div>
 
 <script>
-const TOGGLE_STAPLE_URL = {{ url_for('grocery.toggle_staple', staple_id=0) | tojson }};
+const GROCERY_BASE = {{ url_for('grocery.index') | tojson }};
 const ADD_STAPLE_URL = {{ url_for('grocery.add_staple') | tojson }};
-const DELETE_STAPLE_URL = {{ url_for('grocery.delete_staple', staple_id=0) | tojson }};
 const ADD_TO_LIST_URL = {{ url_for('grocery.add_to_list') | tojson }};
 
-function toggleStapleUrl(id) { return TOGGLE_STAPLE_URL.replace('staples/0/', 'staples/' + id + '/'); }
-function deleteStapleUrl(id) { return DELETE_STAPLE_URL.replace('staples/0/', 'staples/' + id + '/'); }
+function toggleStapleUrl(id) { return GROCERY_BASE + 'staples/' + id + '/toggle'; }
+function deleteStapleUrl(id) { return GROCERY_BASE + 'staples/' + id + '/delete'; }
 
 function showError(msg) {
   document.getElementById('error-toast-body').textContent = msg;
