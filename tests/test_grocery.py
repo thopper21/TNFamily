@@ -175,3 +175,9 @@ def test_delete_staple(logged_in_client, app):
     assert resp.status_code == 302
     with app.app_context():
         assert db.session.get(StapleItem, staple_id) is None
+
+
+def test_toggle_staple_not_found_returns_404(logged_in_client):
+    resp = logged_in_client.post('/grocery/staples/9999/toggle')
+    assert resp.status_code == 404
+    assert resp.get_json()['ok'] is False
