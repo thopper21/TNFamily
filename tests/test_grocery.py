@@ -216,6 +216,13 @@ def test_shop_view_returns_200(logged_in_client):
     assert resp.status_code == 200
 
 
+def test_error_toast_present_exactly_once_on_grocery_pages(logged_in_client):
+    for path in ['/grocery/', '/grocery/sections', '/grocery/shop']:
+        resp = logged_in_client.get(path)
+        count = resp.data.count(b'id="error-toast"')
+        assert count == 1, f"Expected 1 error toast on {path}, got {count}"
+
+
 def test_shop_view_groups_items_by_section(logged_in_client, app):
     with app.app_context():
         section = StoreSection(name='Produce')
