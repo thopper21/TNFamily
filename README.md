@@ -43,7 +43,13 @@ Edit `.env` and fill in the values. Generate a secret key with:
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-### 4. Run
+### 4. Initialize the database
+
+```bash
+flask db upgrade
+```
+
+### 5. Run
 
 ```bash
 python run.py
@@ -55,6 +61,26 @@ Visit `http://127.0.0.1:5000`. Sign in with an approved Google account.
 
 ```bash
 pytest
+```
+
+## Database Migrations
+
+Schema changes are managed with Flask-Migrate (Alembic).
+
+```bash
+# Apply all pending migrations (run this after pulling schema changes)
+flask db upgrade
+
+# Generate a new migration after changing models
+flask db migrate -m "description of change"
+```
+
+**Upgrading an existing deployment that used `db.create_all()`:**
+```bash
+# Tell Alembic the DB is at the initial revision (tables already exist)
+flask db stamp a3f9b1c2e4d7
+# Apply the column-removal migration
+flask db upgrade
 ```
 
 ## Environment Variables

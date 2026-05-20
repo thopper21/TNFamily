@@ -32,7 +32,6 @@ class StapleItem(db.Model):
     section_id = db.Column(
         db.Integer, db.ForeignKey('store_section.id', ondelete='SET NULL'), nullable=True
     )
-    on_shopping_list = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     section = db.relationship('StoreSection', foreign_keys=[section_id])

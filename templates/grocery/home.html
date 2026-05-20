@@ -26,10 +26,10 @@
               data-name="{{ staple.name }}"
               data-section="{{ staple.section.name if staple.section else '' }}">
             <input type="checkbox" class="form-check-input flex-shrink-0"
-                   {% if staple.on_shopping_list %}checked{% endif %}
+                   {% if staple.shopping_list_item %}checked{% endif %}
                    onchange="toggleStaple({{ staple.id }}, this)">
             <span class="flex-grow-1">{{ staple.name }}</span>
-            {% if staple.on_shopping_list %}
+            {% if staple.shopping_list_item %}
             <span class="badge bg-success staple-on-list-badge">On list</span>
             {% endif %}
             {% if staple.section %}
