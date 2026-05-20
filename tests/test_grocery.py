@@ -62,3 +62,55 @@ def test_grocery_sections_requires_login(client):
     resp = client.get('/grocery/sections')
     assert resp.status_code == 302
     assert '/auth/login' in resp.headers['Location']
+
+
+def test_sections_page_returns_200(logged_in_client):
+    resp = logged_in_client.get('/grocery/sections')
+    assert resp.status_code == 200
+
+
+def test_add_section(logged_in_client, app):
+    resp = logged_in_client.post('/grocery/sections', json={'name': 'Dairy'})
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['ok'] is True
+    assert data['name'] == 'Dairy'
+    with app.app_context():
+        assert StoreSection.query.filter_by(name='Dairy').first() is not None
+
+
+def test_add_duplicate_section_returns_409(logged_in_client, app):
+    with app.app_context():
+        db.session.add(StoreSection(name='Dairy'))
+        db.session.commit()
+    resp = logged_in_client.post('/grocery/sections', json={'name': 'Dairy'})
+    assert resp.status_code == 409
+    assert resp.get_json()['ok'] is False
+
+
+def test_delete_section(logged_in_client, app):
+    with app.app_context():
+        section = StoreSection(name='Dairy')
+        db.session.add(section)
+        db.session.commit()
+        section_id = section.id
+    resp = logged_in_client.post(f'/grocery/sections/{section_id}/delete')
+    assert resp.status_code == 302
+    with app.app_context():
+        assert db.session.get(StoreSection, section_id) is None
+
+
+def test_delete_section_nulls_item_section_ids(logged_in_client, app):
+    with app.app_context():
+        section = StoreSection(name='Produce')
+        db.session.add(section)
+        db.session.flush()
+        staple = StapleItem(name='Apples', section_id=section.id)
+        list_item = ShoppingListItem(name='Apples', section_id=section.id)
+        db.session.add_all([staple, list_item])
+        db.session.commit()
+        section_id, staple_id, item_id = section.id, staple.id, list_item.id
+    logged_in_client.post(f'/grocery/sections/{section_id}/delete')
+    with app.app_context():
+        assert db.session.get(StapleItem, staple_id).section_id is None
+        assert db.session.get(ShoppingListItem, item_id).section_id is None

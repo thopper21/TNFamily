@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Sections — {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-6">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2>Manage Sections</h2>
+      <a href="{{ url_for('grocery.index') }}" class="btn btn-outline-secondary btn-sm">← Back</a>
+    </div>
+    <div class="card shadow-sm">
+      <ul class="list-group list-group-flush" id="sections-list">
+        {% for section in sections %}
+        <li class="list-group-item d-flex justify-content-between align-items-center"
+            id="section-row-{{ section.id }}">
+          <span>{{ section.name }}</span>
+          <form method="post" action="{{ url_for('grocery.delete_section', section_id=section.id) }}"
+                onsubmit="return confirm('Delete this section? Items will lose their section.')">
+            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+      <div class="card-footer">
+        <form id="add-section-form" class="d-flex gap-2">
+          <input type="text" id="section-name" class="form-control form-control-sm"
+                 placeholder="Section name" required>
+          <button type="submit" class="btn btn-sm btn-primary">Add</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="error-toast" class="toast" role="alert">
+    <div class="toast-header bg-danger text-white">
+      <strong class="me-auto">Error</strong>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body" id="error-toast-body"></div>
+  </div>
+</div>
+
+<script>
+function showError(msg) {
+  document.getElementById('error-toast-body').textContent = msg;
+  new bootstrap.Toast(document.getElementById('error-toast')).show();
+}
+
+document.getElementById('add-section-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const nameInput = document.getElementById('section-name');
+  const name = nameInput.value.trim();
+  if (!name) return;
+  try {
+    const resp = await fetch('/grocery/sections', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name}),
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error);
+    const li = document.createElement('li');
+    li.className = 'list-group-item d-flex justify-content-between align-items-center';
+    li.id = 'section-row-' + data.id;
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = data.name;
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.action = '/grocery/sections/' + data.id + '/delete';
+    form.addEventListener('submit', (ev) => {
+      if (!confirm('Delete this section? Items will lose their section.')) ev.preventDefault();
+    });
+    const btn = document.createElement('button');
+    btn.type = 'submit';
+    btn.className = 'btn btn-sm btn-outline-danger';
+    btn.textContent = 'Delete';
+    form.appendChild(btn);
+    li.appendChild(nameSpan);
+    li.appendChild(form);
+    document.getElementById('sections-list').appendChild(li);
+    nameInput.value = '';
+  } catch (e) {
+    showError(e.message || 'Something went wrong');
+  }
+});
+</script>
+{% endblock %}

@@ -57,16 +57,32 @@ def shop():
 @grocery_bp.route('/sections')
 @login_required
 def sections():
-    return 'OK', 200
+    all_sections = StoreSection.query.order_by(StoreSection.name).all()
+    return render_template('grocery/sections.html', sections=all_sections)
 
 
 @grocery_bp.route('/sections', methods=['POST'])
 @login_required
 def add_section():
-    return jsonify({'ok': True}), 200
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'ok': False, 'error': 'Name is required'}), 400
+    if StoreSection.query.filter_by(name=name).first():
+        return jsonify({'ok': False, 'error': 'Section already exists'}), 409
+    section = StoreSection(name=name)
+    db.session.add(section)
+    db.session.commit()
+    return jsonify({'ok': True, 'id': section.id, 'name': section.name})
 
 
 @grocery_bp.route('/sections/<int:section_id>/delete', methods=['POST'])
 @login_required
 def delete_section(section_id):
+    section = db.session.get(StoreSection, section_id)
+    if section:
+        StapleItem.query.filter_by(section_id=section_id).update({'section_id': None})
+        ShoppingListItem.query.filter_by(section_id=section_id).update({'section_id': None})
+        db.session.delete(section)
+        db.session.commit()
     return redirect(url_for('grocery.sections'))
