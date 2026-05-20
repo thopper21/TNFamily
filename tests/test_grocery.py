@@ -114,3 +114,64 @@ def test_delete_section_nulls_item_section_ids(logged_in_client, app):
     with app.app_context():
         assert db.session.get(StapleItem, staple_id).section_id is None
         assert db.session.get(ShoppingListItem, item_id).section_id is None
+
+
+def test_add_staple(logged_in_client, app):
+    resp = logged_in_client.post('/grocery/staples', json={'name': 'Eggs'})
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['ok'] is True
+    assert data['name'] == 'Eggs'
+    with app.app_context():
+        assert StapleItem.query.filter_by(name='Eggs').first() is not None
+
+
+def test_add_staple_missing_name_returns_400(logged_in_client):
+    resp = logged_in_client.post('/grocery/staples', json={'name': ''})
+    assert resp.status_code == 400
+    assert resp.get_json()['ok'] is False
+
+
+def test_toggle_staple_on_creates_shopping_list_item(logged_in_client, app):
+    with app.app_context():
+        staple = StapleItem(name='Milk')
+        db.session.add(staple)
+        db.session.commit()
+        staple_id = staple.id
+    resp = logged_in_client.post(f'/grocery/staples/{staple_id}/toggle')
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['ok'] is True
+    assert data['on_shopping_list'] is True
+    with app.app_context():
+        assert db.session.get(StapleItem, staple_id).on_shopping_list is True
+        assert ShoppingListItem.query.filter_by(staple_item_id=staple_id).first() is not None
+
+
+def test_toggle_staple_off_deletes_shopping_list_item(logged_in_client, app):
+    with app.app_context():
+        staple = StapleItem(name='Milk', on_shopping_list=True)
+        db.session.add(staple)
+        db.session.flush()
+        item = ShoppingListItem(name='Milk', staple_item_id=staple.id)
+        db.session.add(item)
+        db.session.commit()
+        staple_id = staple.id
+    resp = logged_in_client.post(f'/grocery/staples/{staple_id}/toggle')
+    assert resp.status_code == 200
+    assert resp.get_json()['on_shopping_list'] is False
+    with app.app_context():
+        assert db.session.get(StapleItem, staple_id).on_shopping_list is False
+        assert ShoppingListItem.query.filter_by(staple_item_id=staple_id).first() is None
+
+
+def test_delete_staple(logged_in_client, app):
+    with app.app_context():
+        staple = StapleItem(name='Eggs')
+        db.session.add(staple)
+        db.session.commit()
+        staple_id = staple.id
+    resp = logged_in_client.post(f'/grocery/staples/{staple_id}/delete')
+    assert resp.status_code == 302
+    with app.app_context():
+        assert db.session.get(StapleItem, staple_id) is None

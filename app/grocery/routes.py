@@ -15,18 +15,55 @@ def index():
 @grocery_bp.route('/staples', methods=['POST'])
 @login_required
 def add_staple():
-    return jsonify({'ok': True}), 200
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'ok': False, 'error': 'Name is required'}), 400
+    section_id = data.get('section_id') or None
+    staple = StapleItem(name=name, section_id=section_id)
+    db.session.add(staple)
+    db.session.commit()
+    return jsonify({
+        'ok': True,
+        'id': staple.id,
+        'name': staple.name,
+        'section_id': staple.section_id,
+        'section_name': staple.section.name if staple.section else None,
+        'on_shopping_list': staple.on_shopping_list,
+    })
 
 
 @grocery_bp.route('/staples/<int:staple_id>/toggle', methods=['POST'])
 @login_required
 def toggle_staple(staple_id):
-    return jsonify({'ok': True}), 200
+    staple = db.session.get(StapleItem, staple_id)
+    if not staple:
+        return jsonify({'ok': False, 'error': 'Not found'}), 404
+    if staple.on_shopping_list:
+        if staple.shopping_list_item:
+            db.session.delete(staple.shopping_list_item)
+        staple.on_shopping_list = False
+    else:
+        item = ShoppingListItem(
+            name=staple.name, section_id=staple.section_id, staple_item_id=staple.id
+        )
+        db.session.add(item)
+        staple.on_shopping_list = True
+    db.session.commit()
+    return jsonify({
+        'ok': True,
+        'on_shopping_list': staple.on_shopping_list,
+        'shopping_count': ShoppingListItem.query.count(),
+    })
 
 
 @grocery_bp.route('/staples/<int:staple_id>/delete', methods=['POST'])
 @login_required
 def delete_staple(staple_id):
+    staple = db.session.get(StapleItem, staple_id)
+    if staple:
+        db.session.delete(staple)
+        db.session.commit()
     return redirect(url_for('grocery.index'))
 
 
