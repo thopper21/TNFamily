@@ -329,3 +329,86 @@ def test_delete_list_item_not_found_returns_404(logged_in_client):
     resp = logged_in_client.post('/grocery/list/9999/delete')
     assert resp.status_code == 404
     assert resp.get_json()['ok'] is False
+
+
+# --- edit section name (issue #3) ---
+
+def test_edit_section_renames_section(logged_in_client, app):
+    with app.app_context():
+        section = StoreSection(name='Dairy')
+        db.session.add(section)
+        db.session.commit()
+        section_id = section.id
+    resp = logged_in_client.post(f'/grocery/sections/{section_id}/edit', json={'name': 'Frozen'})
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['ok'] is True
+    assert data['id'] == section_id
+    assert data['name'] == 'Frozen'
+    with app.app_context():
+        assert db.session.get(StoreSection, section_id).name == 'Frozen'
+
+
+def test_edit_section_preserves_staple_assignments(logged_in_client, app):
+    with app.app_context():
+        section = StoreSection(name='Dairy')
+        db.session.add(section)
+        db.session.flush()
+        staple = StapleItem(name='Milk', section_id=section.id)
+        db.session.add(staple)
+        db.session.commit()
+        section_id, staple_id = section.id, staple.id
+    logged_in_client.post(f'/grocery/sections/{section_id}/edit', json={'name': 'Frozen'})
+    with app.app_context():
+        assert db.session.get(StapleItem, staple_id).section_id == section_id
+
+
+def test_edit_section_not_found_returns_404(logged_in_client):
+    resp = logged_in_client.post('/grocery/sections/9999/edit', json={'name': 'Produce'})
+    assert resp.status_code == 404
+    assert resp.get_json()['ok'] is False
+
+
+def test_edit_section_blank_name_returns_400(logged_in_client, app):
+    with app.app_context():
+        section = StoreSection(name='Dairy')
+        db.session.add(section)
+        db.session.commit()
+        section_id = section.id
+    resp = logged_in_client.post(f'/grocery/sections/{section_id}/edit', json={'name': '  '})
+    assert resp.status_code == 400
+    assert resp.get_json()['ok'] is False
+
+
+def test_edit_section_duplicate_name_returns_409(logged_in_client, app):
+    with app.app_context():
+        db.session.add(StoreSection(name='Dairy'))
+        db.session.add(StoreSection(name='Produce'))
+        db.session.commit()
+        section_id = StoreSection.query.filter_by(name='Dairy').first().id
+    resp = logged_in_client.post(f'/grocery/sections/{section_id}/edit', json={'name': 'Produce'})
+    assert resp.status_code == 409
+    assert resp.get_json()['ok'] is False
+
+
+def test_edit_section_same_name_is_ok(logged_in_client, app):
+    """Renaming to the same name should succeed (no-op)."""
+    with app.app_context():
+        section = StoreSection(name='Dairy')
+        db.session.add(section)
+        db.session.commit()
+        section_id = section.id
+    resp = logged_in_client.post(f'/grocery/sections/{section_id}/edit', json={'name': 'Dairy'})
+    assert resp.status_code == 200
+    assert resp.get_json()['ok'] is True
+
+
+def test_edit_section_requires_login(client, app):
+    with app.app_context():
+        section = StoreSection(name='Dairy')
+        db.session.add(section)
+        db.session.commit()
+        section_id = section.id
+    resp = client.post(f'/grocery/sections/{section_id}/edit', json={'name': 'Frozen'})
+    assert resp.status_code == 302
+    assert '/auth/login' in resp.headers['Location']

@@ -170,6 +170,23 @@ def add_section():
     return jsonify({'ok': True, 'id': section.id, 'name': section.name})
 
 
+@grocery_bp.route('/sections/<int:section_id>/edit', methods=['POST'])
+@login_required
+def edit_section(section_id):
+    section = db.session.get(StoreSection, section_id)
+    if not section:
+        return jsonify({'ok': False, 'error': 'Not found'}), 404
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'ok': False, 'error': 'Name is required'}), 400
+    if name != section.name and StoreSection.query.filter_by(name=name).first():
+        return jsonify({'ok': False, 'error': 'Section already exists'}), 409
+    section.name = name
+    db.session.commit()
+    return jsonify({'ok': True, 'id': section.id, 'name': section.name})
+
+
 @grocery_bp.route('/sections/<int:section_id>/delete', methods=['POST'])
 @login_required
 def delete_section(section_id):
