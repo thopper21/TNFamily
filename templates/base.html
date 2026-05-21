@@ -43,6 +43,13 @@
   <main class="container mt-4">
     {% block content %}{% endblock %}
   </main>
+  {% if current_user.is_authenticated %}
+  <footer class="text-center py-3 mt-5 border-top">
+    <small class="text-muted">
+      <a href="https://github.com/thopper21/TNFamily/issues" class="text-muted" target="_blank" rel="noopener">Report an issue</a>
+    </small>
+  </footer>
+  {% endif %}
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
