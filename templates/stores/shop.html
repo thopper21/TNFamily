@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Shopping — {{ config.APP_NAME }}{% endblock %}
+{% block title %}Shopping — {{ store.name }} — {{ config.APP_NAME }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-  <h2 class="mb-0">Shopping List</h2>
+  <h2 class="mb-0">{{ store.name }} — Shopping List</h2>
   {% if grouped or unsectioned %}
-  <form method="post" action="{{ url_for('grocery.done_shopping') }}"
+  <form method="post" action="{{ url_for('stores.done_shopping', store_id=store.id) }}"
         onsubmit="return confirm('Mark shopping as done? This will clear your list.')">
     <button type="submit" class="btn btn-success">Done Shopping ✓</button>
   </form>
@@ -14,7 +14,8 @@
 
 {% if not grouped and not unsectioned %}
 <p class="text-muted">
-  Your shopping list is empty. <a href="{{ url_for('grocery.index') }}">Add some items</a>.
+  Your shopping list is empty.
+  <a href="{{ url_for('stores.store_index', store_id=store.id) }}">Add some items</a>.
 </p>
 {% else %}
 <div class="accordion" id="shopping-accordion">
@@ -88,8 +89,8 @@
 {% include 'partials/error_toast.html' %}
 
 <script>
-const GROCERY_BASE = {{ url_for('grocery.index') | tojson }};
-function toggleItemUrl(id) { return GROCERY_BASE + 'list/' + id + '/toggle'; }
+const STORE_BASE = {{ url_for('stores.store_index', store_id=store.id) | tojson }};
+function toggleItemUrl(id) { return STORE_BASE + 'list/' + id + '/toggle'; }
 
 function showError(msg) {
   document.getElementById('error-toast-body').textContent = msg;
@@ -100,10 +101,7 @@ async function toggleListItem(itemId, row, badgeId) {
   const checkbox = row.querySelector('input[type="checkbox"]');
   const wasChecked = checkbox.checked;
   try {
-    const resp = await fetch(toggleItemUrl(itemId), {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-    });
+    const resp = await fetch(toggleItemUrl(itemId), {method: 'POST', headers: {'Content-Type': 'application/json'}});
     const data = await resp.json();
     if (!data.ok) throw new Error(data.error);
     const nameEl = row.querySelector('span');
@@ -125,7 +123,7 @@ async function toggleListItem(itemId, row, badgeId) {
     }
   } catch (e) {
     checkbox.checked = wasChecked;
-    showError(e.message || 'Something went wrong. Please try again.');
+    showError(e.message || 'Something went wrong.');
   }
 }
 </script>

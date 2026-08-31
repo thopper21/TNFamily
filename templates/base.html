@@ -18,10 +18,13 @@
       <div class="collapse navbar-collapse" id="navContent">
         <ul class="navbar-nav me-auto">
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Grocery</a>
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Stores</a>
             <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="{{ url_for('grocery.index') }}">Manage List</a></li>
-              <li><a class="dropdown-item" href="{{ url_for('grocery.shop') }}">Shop</a></li>
+              {% for s in all_stores %}
+              <li><a class="dropdown-item" href="{{ url_for('stores.store_index', store_id=s.id) }}">{{ s.name }}</a></li>
+              {% endfor %}
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="{{ url_for('stores.stores_list') }}">Manage stores</a></li>
             </ul>
           </li>
         </ul>

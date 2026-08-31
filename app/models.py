@@ -21,13 +21,22 @@ def load_user(user_id):
         return None
 
 
-class StoreSection(db.Model):
+class Store(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class StoreSection(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    store_id = db.Column(db.Integer, db.ForeignKey('store.id', ondelete='CASCADE'), nullable=False)
+    name = db.Column(db.String(128), nullable=False)
+    __table_args__ = (db.UniqueConstraint('store_id', 'name', name='uq_store_section_store_name'),)
 
 
 class StapleItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    store_id = db.Column(db.Integer, db.ForeignKey('store.id', ondelete='CASCADE'), nullable=False)
     name = db.Column(db.String(256), nullable=False)
     section_id = db.Column(
         db.Integer, db.ForeignKey('store_section.id', ondelete='SET NULL'), nullable=True
@@ -45,6 +54,7 @@ class StapleItem(db.Model):
 
 class ShoppingListItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    store_id = db.Column(db.Integer, db.ForeignKey('store.id', ondelete='CASCADE'), nullable=False)
     name = db.Column(db.String(256), nullable=False)
     section_id = db.Column(
         db.Integer, db.ForeignKey('store_section.id', ondelete='SET NULL'), nullable=True
