@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Stores — {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">Stores</h2>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="list-group mb-4">
+      {% for store in stores %}
+      <a href="{{ url_for('stores.store_index', store_id=store.id) }}"
+         class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+        {{ store.name }}
+        <span class="text-muted small">→</span>
+      </a>
+      {% else %}
+      <div class="list-group-item text-muted">No stores yet. Add one below.</div>
+      {% endfor %}
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-header"><h5 class="mb-0">Add Store</h5></div>
+      <div class="card-body">
+        <form id="add-store-form" class="d-flex gap-2">
+          <input type="text" id="store-name" class="form-control"
+                 placeholder="Store name" required>
+          <button type="submit" class="btn btn-primary">Add</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% include 'partials/error_toast.html' %}
+
+<script>
+const ADD_STORE_URL = {{ url_for('stores.create_store') | tojson }};
+const STORES_BASE = {{ url_for('stores.stores_list') | tojson }};
+
+function showError(msg) {
+  document.getElementById('error-toast-body').textContent = msg;
+  new bootstrap.Toast(document.getElementById('error-toast')).show();
+}
+
+document.getElementById('add-store-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const nameInput = document.getElementById('store-name');
+  const name = nameInput.value.trim();
+  if (!name) return;
+  try {
+    const resp = await fetch(ADD_STORE_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name}),
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error);
+    window.location.href = STORES_BASE + data.id + '/';
+  } catch (e) {
+    showError(e.message || 'Something went wrong');
+  }
+});
+</script>
+{% endblock %}

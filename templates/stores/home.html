@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Grocery — {{ config.APP_NAME }}{% endblock %}
+{% block title %}{{ store.name }} — {{ config.APP_NAME }}{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">Grocery</h2>
+<h2 class="mb-4">{{ store.name }}</h2>
 
 <div class="row">
   <!-- Staples panel -->
@@ -11,11 +11,11 @@
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Staples</h5>
         <div class="d-flex gap-2 align-items-center">
-          <div class="btn-group btn-group-sm" role="group" aria-label="Sort order">
+          <div class="btn-group btn-group-sm" role="group">
             <button type="button" id="sort-az" class="btn btn-outline-secondary active" onclick="setSortMode('az')">A–Z</button>
             <button type="button" id="sort-section" class="btn btn-outline-secondary" onclick="setSortMode('section')">By section</button>
           </div>
-          <a href="{{ url_for('grocery.sections') }}" class="btn btn-sm btn-outline-secondary">Manage sections</a>
+          <a href="{{ url_for('stores.store_manage', store_id=store.id) }}" class="btn btn-sm btn-outline-secondary">Manage</a>
         </div>
       </div>
       <div class="card-body p-0">
@@ -35,7 +35,7 @@
             {% if staple.section %}
             <span class="badge bg-secondary">{{ staple.section.name }}</span>
             {% endif %}
-            <form method="post" action="{{ url_for('grocery.delete_staple', staple_id=staple.id) }}"
+            <form method="post" action="{{ url_for('stores.delete_staple', store_id=store.id, staple_id=staple.id) }}"
                   onsubmit="return confirm('Delete ' + {{ staple.name | tojson }} + '?')">
               <button type="submit" class="btn btn-sm btn-outline-danger py-0">×</button>
             </form>
@@ -81,7 +81,7 @@
           <span class="badge bg-primary fs-6" id="shopping-count">
             {{ shopping_count }} item{{ 's' if shopping_count != 1 else '' }} on your list
           </span>
-          <a href="{{ url_for('grocery.shop') }}" class="btn btn-success">Start Shopping →</a>
+          <a href="{{ url_for('stores.store_shop', store_id=store.id) }}" class="btn btn-success">Start Shopping →</a>
         </div>
         {% if ad_hoc_items %}
         <ul class="list-group list-group-flush" id="ad-hoc-list">
@@ -105,13 +105,13 @@
 {% include 'partials/error_toast.html' %}
 
 <script>
-const GROCERY_BASE = {{ url_for('grocery.index') | tojson }};
-const ADD_STAPLE_URL = {{ url_for('grocery.add_staple') | tojson }};
-const ADD_TO_LIST_URL = {{ url_for('grocery.add_to_list') | tojson }};
+const STORE_BASE = {{ url_for('stores.store_index', store_id=store.id) | tojson }};
+const ADD_STAPLE_URL = {{ url_for('stores.add_staple', store_id=store.id) | tojson }};
+const ADD_TO_LIST_URL = {{ url_for('stores.add_to_list', store_id=store.id) | tojson }};
 
-function toggleStapleUrl(id) { return GROCERY_BASE + 'staples/' + id + '/toggle'; }
-function deleteStapleUrl(id) { return GROCERY_BASE + 'staples/' + id + '/delete'; }
-function deleteListItemUrl(id) { return GROCERY_BASE + 'list/' + id + '/delete'; }
+function toggleStapleUrl(id) { return STORE_BASE + 'staples/' + id + '/toggle'; }
+function deleteStapleUrl(id) { return STORE_BASE + 'staples/' + id + '/delete'; }
+function deleteListItemUrl(id) { return STORE_BASE + 'list/' + id + '/delete'; }
 
 function showError(msg) {
   document.getElementById('error-toast-body').textContent = msg;
@@ -129,24 +129,23 @@ function sortKey(li) {
   const checked = li.querySelector('input[type="checkbox"]').checked ? 1 : 0;
   const name = li.dataset.name.toLowerCase();
   const section = li.dataset.section.toLowerCase();
-  if (currentSortMode === 'section') {
-    return [checked, section || '￿', name];
-  }
-  return [checked, name];
+  return currentSortMode === 'section'
+    ? [checked, section || '￿', name]
+    : [checked, name];
 }
 
 function applySortToList() {
   const list = document.getElementById('staples-list');
-  const items = Array.from(list.querySelectorAll('li'));
-  items.sort((a, b) => {
-    const ka = sortKey(a), kb = sortKey(b);
-    for (let i = 0; i < ka.length; i++) {
-      if (ka[i] < kb[i]) return -1;
-      if (ka[i] > kb[i]) return 1;
-    }
-    return 0;
-  });
-  items.forEach(li => list.appendChild(li));
+  Array.from(list.querySelectorAll('li'))
+    .sort((a, b) => {
+      const ka = sortKey(a), kb = sortKey(b);
+      for (let i = 0; i < ka.length; i++) {
+        if (ka[i] < kb[i]) return -1;
+        if (ka[i] > kb[i]) return 1;
+      }
+      return 0;
+    })
+    .forEach(li => list.appendChild(li));
 }
 
 function setSortMode(mode) {
@@ -160,21 +159,16 @@ async function toggleStaple(stapleId, checkbox) {
   const row = document.getElementById('staple-' + stapleId);
   const wasChecked = !checkbox.checked;
   try {
-    const resp = await fetch(toggleStapleUrl(stapleId), {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-    });
+    const resp = await fetch(toggleStapleUrl(stapleId), {method: 'POST', headers: {'Content-Type': 'application/json'}});
     const data = await resp.json();
     if (!data.ok) throw new Error(data.error);
-    const list = document.getElementById('staples-list');
     let badge = row.querySelector('.staple-on-list-badge');
     if (data.on_shopping_list) {
       if (!badge) {
         badge = document.createElement('span');
         badge.className = 'badge bg-success staple-on-list-badge';
         badge.textContent = 'On list';
-        const nameEl = row.querySelector('span.flex-grow-1');
-        nameEl.insertAdjacentElement('afterend', badge);
+        row.querySelector('span.flex-grow-1').insertAdjacentElement('afterend', badge);
       }
       checkbox.checked = true;
     } else {
@@ -243,12 +237,9 @@ document.getElementById('add-staple-form').addEventListener('submit', async (e) 
   }
 });
 
-async function deleteAdHocItem(itemId, btn) {
+async function deleteAdHocItem(itemId) {
   try {
-    const resp = await fetch(deleteListItemUrl(itemId), {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-    });
+    const resp = await fetch(deleteListItemUrl(itemId), {method: 'POST', headers: {'Content-Type': 'application/json'}});
     const data = await resp.json();
     if (!data.ok) throw new Error(data.error);
     document.getElementById('ad-hoc-' + itemId).remove();
@@ -289,7 +280,7 @@ document.getElementById('add-list-form').addEventListener('submit', async (e) =>
     const delBtn = document.createElement('button');
     delBtn.className = 'btn btn-link btn-sm text-muted p-0 ms-2 lh-1';
     delBtn.textContent = '×';
-    delBtn.onclick = () => deleteAdHocItem(data.id, delBtn);
+    delBtn.onclick = () => deleteAdHocItem(data.id);
     li.appendChild(nameSpan);
     li.appendChild(delBtn);
     document.getElementById('ad-hoc-list').prepend(li);
