@@ -49,3 +49,14 @@ def logged_in_client(app, client):
         sess['_fresh'] = True
 
     return client
+
+
+@pytest.fixture
+def store(app):
+    from app.extensions import db
+    from app.models import Store
+
+    s = Store(name='Test Store')
+    db.session.add(s)
+    db.session.commit()
+    return s
