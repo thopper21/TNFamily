@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Tests (SQLite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: python -m pytest
+        env:
+          FLASK_ENV: local
+
+  migrate-postgres:
+    name: Migrations (PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tnfamily
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      FLASK_APP: run.py
+      FLASK_ENV: cloud
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/tnfamily
+      SECRET_KEY: ci-secret
+      GOOGLE_CLIENT_ID: ci-client-id
+      GOOGLE_CLIENT_SECRET: ci-client-secret
+      APPROVED_EMAILS: test@example.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Upgrade to head
+        run: flask db upgrade
+      - name: Downgrade to base
+        run: flask db downgrade base
+      - name: Upgrade again (verify round-trip)
+        run: flask db upgrade
