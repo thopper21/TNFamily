@@ -49,6 +49,17 @@ def create_store():
     return jsonify({'ok': True, 'id': store.id, 'name': store.name})
 
 
+@stores_bp.route('/<int:store_id>/manage/pin', methods=['POST'])
+@login_required
+def toggle_pin(store_id):
+    store = db.session.get(Store, store_id)
+    if not store:
+        return jsonify({'ok': False, 'error': 'Not found'}), 404
+    store.pinned = not store.pinned
+    db.session.commit()
+    return jsonify({'ok': True, 'pinned': store.pinned})
+
+
 @stores_bp.route('/<int:store_id>/manage/name', methods=['POST'])
 @login_required
 def rename_store(store_id):

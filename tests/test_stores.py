@@ -488,6 +488,51 @@ def test_edit_section_same_name_is_ok(logged_in_client, store, app):
     assert resp.get_json()['ok'] is True
 
 
+def test_toggle_pin_pins_store(logged_in_client, store, app):
+    resp = logged_in_client.post(f'/stores/{store.id}/manage/pin')
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['ok'] is True
+    assert data['pinned'] is True
+    with app.app_context():
+        assert db.session.get(Store, store.id).pinned is True
+
+
+def test_toggle_pin_unpins_store(logged_in_client, store, app):
+    store.pinned = True
+    db.session.commit()
+    resp = logged_in_client.post(f'/stores/{store.id}/manage/pin')
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['ok'] is True
+    assert data['pinned'] is False
+    with app.app_context():
+        assert db.session.get(Store, store.id).pinned is False
+
+
+def test_toggle_pin_not_found_returns_404(logged_in_client):
+    resp = logged_in_client.post('/stores/9999/manage/pin')
+    assert resp.status_code == 404
+
+
+def test_toggle_pin_requires_login(client, store):
+    resp = client.post(f'/stores/{store.id}/manage/pin')
+    assert resp.status_code == 302
+    assert '/auth/login' in resp.headers['Location']
+
+
+def test_manage_page_shows_pin_button(logged_in_client, store):
+    resp = logged_in_client.get(f'/stores/{store.id}/manage')
+    assert b'Pin to home page' in resp.data
+
+
+def test_manage_page_shows_unpin_button_when_pinned(logged_in_client, store, app):
+    store.pinned = True
+    db.session.commit()
+    resp = logged_in_client.get(f'/stores/{store.id}/manage')
+    assert b'Unpin from home page' in resp.data
+
+
 def test_store_pinned_defaults_to_false(app):
     with app.app_context():
         s = Store(name='Pinned Test')
