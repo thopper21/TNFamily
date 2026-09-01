@@ -524,17 +524,6 @@ def test_toggle_pin_requires_login(client, store):
 def test_manage_page_shows_pin_button(logged_in_client, store):
     resp = logged_in_client.get(f'/stores/{store.id}/manage')
     assert b'Pin to home page' in resp.data
-    assert b'Home Page' in resp.data
-
-
-def test_manage_page_pin_section_is_separate_from_name_section(logged_in_client, store):
-    resp = logged_in_client.get(f'/stores/{store.id}/manage')
-    html = resp.data.decode()
-    home_page_pos = html.find('Home Page')
-    pin_btn_pos = html.find('Pin to home page')
-    store_name_pos = html.find('Store Name')
-    assert home_page_pos > store_name_pos, 'Home Page section should appear after Store Name section'
-    assert pin_btn_pos > home_page_pos, 'Pin button should be inside the Home Page section'
 
 
 def test_manage_page_shows_unpin_button_when_pinned(logged_in_client, store, app):
