@@ -21,7 +21,7 @@ def upgrade():
         batch_op.add_column(sa.Column('pinned', sa.Boolean(), nullable=True))
 
     conn = op.get_bind()
-    conn.execute(sa.text("UPDATE store SET pinned = 0"))
+    conn.execute(sa.text("UPDATE store SET pinned = FALSE"))
 
     with op.batch_alter_table('store') as batch_op:
         batch_op.alter_column('pinned', existing_type=sa.Boolean(), nullable=False)
