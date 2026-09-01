@@ -10,11 +10,18 @@
   <div class="col-md-6">
     <div class="list-group mb-4">
       {% for store in stores %}
-      <a href="{{ url_for('stores.store_index', store_id=store.id) }}"
-         class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-        {{ store.name }}
-        <span class="text-muted small">→</span>
-      </a>
+      <div class="list-group-item d-flex justify-content-between align-items-center"
+           id="store-row-{{ store.id }}">
+        <a href="{{ url_for('stores.store_index', store_id=store.id) }}"
+           class="flex-grow-1 text-decoration-none text-body">
+          {{ store.name }}
+        </a>
+        <button class="btn btn-sm ms-2 btn-pin {% if store.pinned %}btn-warning{% else %}btn-outline-secondary{% endif %}"
+                data-store-id="{{ store.id }}"
+                data-pinned="{{ 'true' if store.pinned else 'false' }}">
+          {% if store.pinned %}Unpin{% else %}Pin{% endif %}
+        </button>
+      </div>
       {% else %}
       <div class="list-group-item text-muted">No stores yet. Add one below.</div>
       {% endfor %}
@@ -38,6 +45,34 @@
 <script>
 const ADD_STORE_URL = {{ url_for('stores.create_store') | tojson }};
 const STORES_BASE = {{ url_for('stores.stores_list') | tojson }};
+
+function togglePinUrl(id) { return STORES_BASE + id + '/manage/pin'; }
+
+document.querySelectorAll('.btn-pin').forEach((btn) => {
+  btn.addEventListener('click', async () => {
+    const storeId = btn.dataset.storeId;
+    try {
+      const resp = await fetch(togglePinUrl(storeId), {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+      });
+      const data = await resp.json();
+      if (!data.ok) throw new Error(data.error);
+      if (data.pinned) {
+        btn.textContent = 'Unpin';
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-warning');
+      } else {
+        btn.textContent = 'Pin';
+        btn.classList.remove('btn-warning');
+        btn.classList.add('btn-outline-secondary');
+      }
+      btn.dataset.pinned = data.pinned ? 'true' : 'false';
+    } catch (e) {
+      showError(e.message || 'Something went wrong');
+    }
+  });
+});
 
 function showError(msg) {
   document.getElementById('error-toast-body').textContent = msg;

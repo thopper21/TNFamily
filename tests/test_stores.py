@@ -76,6 +76,18 @@ def test_stores_list_returns_200(logged_in_client):
     assert resp.status_code == 200
 
 
+def test_stores_list_shows_pin_button(logged_in_client, store):
+    resp = logged_in_client.get('/stores/')
+    assert b'Pin' in resp.data
+
+
+def test_stores_list_shows_unpin_for_pinned_store(logged_in_client, store):
+    store.pinned = True
+    db.session.commit()
+    resp = logged_in_client.get('/stores/')
+    assert b'Unpin' in resp.data
+
+
 def test_create_store(logged_in_client):
     resp = logged_in_client.post('/stores/', json={'name': 'Target'})
     assert resp.status_code == 200
