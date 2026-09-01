@@ -20,15 +20,7 @@
         <button id="btn-edit-name" class="btn btn-sm btn-outline-secondary">Edit</button>
         <button id="btn-save-name" class="btn btn-sm btn-success d-none">Save</button>
         <button id="btn-cancel-name" class="btn btn-sm btn-outline-secondary d-none">Cancel</button>
-      </div>
-    </div>
-
-    <!-- Home page shortcut -->
-    <div class="card shadow-sm mb-4">
-      <div class="card-header"><h5 class="mb-0">Home Page</h5></div>
-      <div class="card-body d-flex align-items-center justify-content-between">
-        <span class="text-muted">Show this store as a shortcut on the home page</span>
-        <button id="btn-pin" class="btn btn-outline-primary" onclick="togglePin()">
+        <button id="btn-pin" class="btn btn-sm btn-outline-primary ms-2" onclick="togglePin()">
           {% if store.pinned %}Unpin from home page{% else %}Pin to home page{% endif %}
         </button>
       </div>
