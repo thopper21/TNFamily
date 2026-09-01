@@ -20,6 +20,9 @@
         <button id="btn-edit-name" class="btn btn-sm btn-outline-secondary">Edit</button>
         <button id="btn-save-name" class="btn btn-sm btn-success d-none">Save</button>
         <button id="btn-cancel-name" class="btn btn-sm btn-outline-secondary d-none">Cancel</button>
+        <button id="btn-pin" class="btn btn-sm btn-outline-primary ms-2" onclick="togglePin()">
+          {% if store.pinned %}Unpin from home page{% else %}Pin to home page{% endif %}
+        </button>
       </div>
     </div>
 
@@ -126,6 +129,23 @@ nameInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') saveStoreName();
   if (e.key === 'Escape') btnCancel.click();
 });
+
+const TOGGLE_PIN_URL = {{ url_for('stores.toggle_pin', store_id=store.id) | tojson }};
+
+async function togglePin() {
+  try {
+    const resp = await fetch(TOGGLE_PIN_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error);
+    document.getElementById('btn-pin').textContent =
+      data.pinned ? 'Unpin from home page' : 'Pin to home page';
+  } catch (e) {
+    showError(e.message || 'Something went wrong');
+  }
+}
 
 function wireEditButtons(li, sectionId) {
   const nameSpan = li.querySelector('.section-name');
