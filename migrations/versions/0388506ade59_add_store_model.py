@@ -34,10 +34,19 @@ def upgrade():
     with op.batch_alter_table('store_section') as batch_op:
         batch_op.add_column(sa.Column('store_id', sa.Integer(), nullable=True))
     conn.execute(sa.text("UPDATE store_section SET store_id = :sid"), {'sid': default_id})
-    with op.batch_alter_table('store_section', recreate='always') as batch_op:
-        batch_op.alter_column('store_id', existing_type=sa.Integer(), nullable=False)
-        batch_op.create_foreign_key('fk_store_section_store_id', 'store', ['store_id'], ['id'], ondelete='CASCADE')
-        batch_op.create_unique_constraint('uq_store_section_store_name', ['store_id', 'name'])
+    if conn.dialect.name == 'postgresql':
+        # recreate='always' would DROP store_section, which PostgreSQL rejects while
+        # staple_item and shopping_list_item hold FK references to it.
+        with op.batch_alter_table('store_section') as batch_op:
+            batch_op.alter_column('store_id', existing_type=sa.Integer(), nullable=False)
+            batch_op.drop_constraint('store_section_name_key', type_='unique')
+            batch_op.create_foreign_key('fk_store_section_store_id', 'store', ['store_id'], ['id'], ondelete='CASCADE')
+            batch_op.create_unique_constraint('uq_store_section_store_name', ['store_id', 'name'])
+    else:
+        with op.batch_alter_table('store_section', recreate='always') as batch_op:
+            batch_op.alter_column('store_id', existing_type=sa.Integer(), nullable=False)
+            batch_op.create_foreign_key('fk_store_section_store_id', 'store', ['store_id'], ['id'], ondelete='CASCADE')
+            batch_op.create_unique_constraint('uq_store_section_store_name', ['store_id', 'name'])
 
     # staple_item: add store_id (nullable), backfill, alter NOT NULL + FK
     with op.batch_alter_table('staple_item') as batch_op:
@@ -63,9 +72,17 @@ def downgrade():
     with op.batch_alter_table('staple_item') as batch_op:
         batch_op.drop_constraint('fk_staple_item_store_id', type_='foreignkey')
         batch_op.drop_column('store_id')
-    with op.batch_alter_table('store_section', recreate='always') as batch_op:
-        batch_op.drop_constraint('uq_store_section_store_name', type_='unique')
-        batch_op.drop_constraint('fk_store_section_store_id', type_='foreignkey')
-        batch_op.drop_column('store_id')
-        batch_op.create_unique_constraint('uq_store_section_name', ['name'])
+    conn = op.get_bind()
+    if conn.dialect.name == 'postgresql':
+        with op.batch_alter_table('store_section') as batch_op:
+            batch_op.drop_constraint('uq_store_section_store_name', type_='unique')
+            batch_op.drop_constraint('fk_store_section_store_id', type_='foreignkey')
+            batch_op.drop_column('store_id')
+            batch_op.create_unique_constraint('store_section_name_key', ['name'])
+    else:
+        with op.batch_alter_table('store_section', recreate='always') as batch_op:
+            batch_op.drop_constraint('uq_store_section_store_name', type_='unique')
+            batch_op.drop_constraint('fk_store_section_store_id', type_='foreignkey')
+            batch_op.drop_column('store_id')
+            batch_op.create_unique_constraint('uq_store_section_name', ['name'])
     op.drop_table('store')
