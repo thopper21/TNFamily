@@ -488,6 +488,24 @@ def test_edit_section_same_name_is_ok(logged_in_client, store, app):
     assert resp.get_json()['ok'] is True
 
 
+def test_store_pinned_defaults_to_false(app):
+    with app.app_context():
+        s = Store(name='Pinned Test')
+        db.session.add(s)
+        db.session.commit()
+        assert db.session.get(Store, s.id).pinned is False
+
+
+def test_store_can_be_pinned(app):
+    with app.app_context():
+        s = Store(name='Pinnable')
+        db.session.add(s)
+        db.session.commit()
+        s.pinned = True
+        db.session.commit()
+        assert db.session.get(Store, s.id).pinned is True
+
+
 def test_error_toast_present_on_store_pages(logged_in_client, store):
     for path in [f'/stores/{store.id}/', f'/stores/{store.id}/shop', f'/stores/{store.id}/manage']:
         resp = logged_in_client.get(path)
