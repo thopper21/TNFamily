@@ -142,5 +142,3 @@ TNFamily/
    | `DB_NAME` | database name |
 
 4. Add the Cloud Run service URL to **Authorized redirect URIs** in Google Cloud Console: `https://<your-service>.run.app/auth/callback`
-
-> **Before making schema changes:** integrate [Flask-Migrate](https://flask-migrate.readthedocs.io/) — `db.create_all()` will not apply column additions to existing tables.
