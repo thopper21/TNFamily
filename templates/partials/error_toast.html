@@ -7,3 +7,10 @@
     <div class="toast-body" id="error-toast-body"></div>
   </div>
 </div>
+
+<script>
+function showError(msg) {
+  document.getElementById('error-toast-body').textContent = msg;
+  new bootstrap.Toast(document.getElementById('error-toast')).show();
+}
+</script>

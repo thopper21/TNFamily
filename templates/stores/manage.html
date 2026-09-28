@@ -70,11 +70,6 @@ const ADD_SECTION_URL = {{ url_for('stores.add_section', store_id=store.id) | to
 function deleteSectionUrl(id) { return STORE_BASE + 'sections/' + id + '/delete'; }
 function editSectionUrl(id) { return STORE_BASE + 'sections/' + id + '/edit'; }
 
-function showError(msg) {
-  document.getElementById('error-toast-body').textContent = msg;
-  new bootstrap.Toast(document.getElementById('error-toast')).show();
-}
-
 // Store rename
 const nameDisplay = document.getElementById('store-name-display');
 const nameInput = document.getElementById('store-name-input');

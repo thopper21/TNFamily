@@ -113,11 +113,6 @@ function toggleStapleUrl(id) { return STORE_BASE + 'staples/' + id + '/toggle'; 
 function deleteStapleUrl(id) { return STORE_BASE + 'staples/' + id + '/delete'; }
 function deleteListItemUrl(id) { return STORE_BASE + 'list/' + id + '/delete'; }
 
-function showError(msg) {
-  document.getElementById('error-toast-body').textContent = msg;
-  new bootstrap.Toast(document.getElementById('error-toast')).show();
-}
-
 function updateShoppingCount(count) {
   document.getElementById('shopping-count').textContent =
     count + ' item' + (count !== 1 ? 's' : '') + ' on your list';
