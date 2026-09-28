@@ -18,6 +18,13 @@ def _resolve_section_id(data, store_id):
     return section_id, None
 
 
+def _shopping_count(store_id):
+    return db.session.scalar(
+        select(func.count()).select_from(ShoppingListItem)
+        .where(ShoppingListItem.store_id == store_id)
+    )
+
+
 @stores_bp.app_context_processor
 def inject_all_stores():
     if current_user.is_authenticated:
@@ -96,10 +103,7 @@ def store_index(store_id):
         .where(StoreSection.store_id == store_id)
         .order_by(StoreSection.name)
     ).all()
-    shopping_count = db.session.scalar(
-        select(func.count()).select_from(ShoppingListItem)
-        .where(ShoppingListItem.store_id == store_id)
-    )
+    shopping_count = _shopping_count(store_id)
     ad_hoc_items = db.session.scalars(
         select(ShoppingListItem)
         .where(
@@ -160,14 +164,10 @@ def toggle_staple(store_id, staple_id):
             store_id=store_id,
         ))
     db.session.commit()
-    shopping_count = db.session.scalar(
-        select(func.count()).select_from(ShoppingListItem)
-        .where(ShoppingListItem.store_id == store_id)
-    )
     return jsonify({
         'ok': True,
         'on_shopping_list': staple.shopping_list_item is not None,
-        'shopping_count': shopping_count,
+        'shopping_count': _shopping_count(store_id),
     })
 
 
@@ -197,11 +197,7 @@ def add_to_list(store_id):
     item = ShoppingListItem(name=name, section_id=section_id, store_id=store_id)
     db.session.add(item)
     db.session.commit()
-    shopping_count = db.session.scalar(
-        select(func.count()).select_from(ShoppingListItem)
-        .where(ShoppingListItem.store_id == store_id)
-    )
-    return jsonify({'ok': True, 'id': item.id, 'shopping_count': shopping_count})
+    return jsonify({'ok': True, 'id': item.id, 'shopping_count': _shopping_count(store_id)})
 
 
 @stores_bp.route('/<int:store_id>/list/<int:item_id>/delete', methods=['POST'])
@@ -212,11 +208,7 @@ def delete_list_item(store_id, item_id):
         return jsonify({'ok': False, 'error': 'Not found'}), 404
     db.session.delete(item)
     db.session.commit()
-    shopping_count = db.session.scalar(
-        select(func.count()).select_from(ShoppingListItem)
-        .where(ShoppingListItem.store_id == store_id)
-    )
-    return jsonify({'ok': True, 'shopping_count': shopping_count})
+    return jsonify({'ok': True, 'shopping_count': _shopping_count(store_id)})
 
 
 @stores_bp.route('/<int:store_id>/shop')
