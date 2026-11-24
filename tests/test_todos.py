@@ -117,6 +117,34 @@ def test_edit_todo_blank_title_returns_400(logged_in_client, app):
     assert resp.status_code == 400
 
 
+def test_edit_todo_without_description_key_keeps_existing_description(logged_in_client, app):
+    with app.app_context():
+        todo = Todo(title='Clean the garage', description='Donate old tools')
+        db.session.add(todo)
+        db.session.commit()
+        todo_id = todo.id
+    resp = logged_in_client.post(f'/todos/{todo_id}/edit', json={'title': 'Clean the garage well'})
+    assert resp.status_code == 200
+    assert resp.get_json()['description'] == 'Donate old tools'
+    with app.app_context():
+        assert db.session.get(Todo, todo_id).description == 'Donate old tools'
+
+
+def test_edit_todo_explicit_empty_description_clears_it(logged_in_client, app):
+    with app.app_context():
+        todo = Todo(title='Clean the garage', description='Donate old tools')
+        db.session.add(todo)
+        db.session.commit()
+        todo_id = todo.id
+    resp = logged_in_client.post(
+        f'/todos/{todo_id}/edit', json={'title': 'Clean the garage', 'description': ''}
+    )
+    assert resp.status_code == 200
+    assert resp.get_json()['description'] is None
+    with app.app_context():
+        assert db.session.get(Todo, todo_id).description is None
+
+
 def test_edit_todo_not_found_returns_404(logged_in_client):
     resp = logged_in_client.post('/todos/9999/edit', json={'title': 'X'})
     assert resp.status_code == 404

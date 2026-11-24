@@ -31,7 +31,7 @@
           </div>
         </li>
         {% else %}
-        <li class="list-group-item text-muted">No todos yet. Add one below.</li>
+        <li class="list-group-item text-muted" id="todos-empty">No todos yet. Add one below.</li>
         {% endfor %}
       </ul>
       <div class="card-footer">
@@ -136,6 +136,73 @@ function wireEditButtons(li, todoId) {
     if (e.key === 'Enter') saveEdit();
     if (e.key === 'Escape') btnCancel.click();
   });
+  descInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') btnCancel.click();
+  });
+}
+
+function buildTodoLi(id, title, description) {
+  const li = document.createElement('li');
+  li.className = 'list-group-item d-flex align-items-start gap-2';
+  li.id = 'todo-row-' + id;
+
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.className = 'form-check-input flex-shrink-0 mt-1';
+  checkbox.addEventListener('change', () => toggleTodo(id, checkbox));
+
+  const body = document.createElement('div');
+  body.className = 'flex-grow-1';
+
+  const titleEl = document.createElement('div');
+  titleEl.className = 'todo-title';
+  titleEl.textContent = title;
+
+  const descEl = document.createElement('div');
+  descEl.className = 'todo-description text-muted small' + (description ? '' : ' d-none');
+  descEl.textContent = description || '';
+
+  const titleInput = document.createElement('input');
+  titleInput.type = 'text';
+  titleInput.className = 'form-control form-control-sm todo-title-input d-none mb-1';
+  titleInput.value = title;
+
+  const descInput = document.createElement('textarea');
+  descInput.className = 'form-control form-control-sm todo-description-input d-none';
+  descInput.rows = 2;
+  descInput.placeholder = 'Details (optional)';
+  descInput.value = description || '';
+
+  body.append(titleEl, descEl, titleInput, descInput);
+
+  const btnEdit = document.createElement('button');
+  btnEdit.className = 'btn btn-sm btn-outline-secondary btn-edit';
+  btnEdit.textContent = 'Edit';
+  const btnSave = document.createElement('button');
+  btnSave.className = 'btn btn-sm btn-success btn-save d-none';
+  btnSave.textContent = 'Save';
+  const btnCancel = document.createElement('button');
+  btnCancel.className = 'btn btn-sm btn-outline-secondary btn-cancel d-none';
+  btnCancel.textContent = 'Cancel';
+
+  const delForm = document.createElement('form');
+  delForm.method = 'post';
+  delForm.action = deleteTodoUrl(id);
+  delForm.addEventListener('submit', (ev) => {
+    if (!confirm('Delete ' + title + '?')) ev.preventDefault();
+  });
+  const delBtn = document.createElement('button');
+  delBtn.type = 'submit';
+  delBtn.className = 'btn btn-sm btn-outline-danger';
+  delBtn.textContent = 'Delete';
+  delForm.appendChild(delBtn);
+
+  const btnGroup = document.createElement('div');
+  btnGroup.className = 'd-flex gap-1 flex-shrink-0';
+  btnGroup.append(btnEdit, btnSave, btnCancel, delForm);
+
+  li.append(checkbox, body, btnGroup);
+  return li;
 }
 
 document.querySelectorAll('#todos-list li[id^="todo-row-"]').forEach((li) => {
@@ -156,7 +223,13 @@ document.getElementById('add-todo-form').addEventListener('submit', async (e) =>
     });
     const data = await resp.json();
     if (!data.ok) throw new Error(data.error);
-    window.location.href = TODOS_BASE;
+    const emptyPlaceholder = document.getElementById('todos-empty');
+    if (emptyPlaceholder) emptyPlaceholder.remove();
+    const li = buildTodoLi(data.id, data.title, data.description);
+    wireEditButtons(li, data.id);
+    document.getElementById('todos-list').prepend(li);
+    titleInput.value = '';
+    descInput.value = '';
   } catch (e) {
     showError(e.message || 'Something went wrong');
   }

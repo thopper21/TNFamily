@@ -61,7 +61,8 @@ def edit_todo(todo_id):
     if not title:
         return jsonify({'ok': False, 'error': 'Title is required'}), 400
     todo.title = title
-    todo.description = (data.get('description') or '').strip() or None
+    if 'description' in data:
+        todo.description = (data.get('description') or '').strip() or None
     db.session.commit()
     return jsonify({
         'ok': True,
