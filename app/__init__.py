@@ -1,7 +1,7 @@
 # app/__init__.py
 import os
 from flask import Flask
-from config import config_map
+from config import DEFAULT_SECRET_KEY, config_map
 from app.extensions import db, login_manager, migrate, oauth
 
 
@@ -12,6 +12,14 @@ def create_app(config_override=None):
     app.config.from_object(config_map.get(env, config_map['local']))
     if config_override:
         app.config.update(config_override)
+
+    if env == 'cloud':
+        secret_key = app.config.get('SECRET_KEY')
+        if not secret_key or secret_key == DEFAULT_SECRET_KEY:
+            raise RuntimeError(
+                'SECRET_KEY must be set to a real value when FLASK_ENV=cloud; '
+                'refusing to start with the insecure default.'
+            )
 
     db.init_app(app)
     migrate.init_app(app, db)

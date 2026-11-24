@@ -17,9 +17,12 @@ def _build_cloud_db_url():
     return os.environ.get('DATABASE_URL')
 
 
+DEFAULT_SECRET_KEY = 'dev-secret-change-me'
+
+
 class Config:
     APP_NAME = os.environ.get('APP_NAME', 'Family Hub')
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-change-me')
+    SECRET_KEY = os.environ.get('SECRET_KEY', DEFAULT_SECRET_KEY)
     GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
     APPROVED_EMAILS = parse_approved_emails(os.environ.get('APPROVED_EMAILS', ''))
