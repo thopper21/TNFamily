@@ -68,3 +68,12 @@ class ShoppingListItem(db.Model):
 
     section = db.relationship('StoreSection', foreign_keys=[section_id])
     staple = db.relationship('StapleItem', back_populates='shopping_list_item')
+
+
+class Todo(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(256), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    done = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    completed_at = db.Column(db.DateTime, nullable=True)

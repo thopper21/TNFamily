@@ -104,10 +104,11 @@ TNFamily/
 ├── app/
 │   ├── __init__.py       # Application factory
 │   ├── extensions.py     # Shared Flask extensions (db, login_manager, oauth)
-│   ├── models.py         # SQLAlchemy models (User, Store, StoreSection, StapleItem, ShoppingListItem)
+│   ├── models.py         # SQLAlchemy models (User, Store, StoreSection, StapleItem, ShoppingListItem, Todo)
 │   ├── auth/             # Google OAuth blueprint (/auth/*)
 │   ├── home/             # Home page blueprint (/)
-│   └── stores/           # Multi-store shopping list blueprint (/stores/*)
+│   ├── stores/           # Multi-store shopping list blueprint (/stores/*)
+│   └── todos/            # House todo list blueprint (/todos/*)
 ├── templates/            # Jinja2 + Bootstrap 5 templates
 ├── tests/                # pytest test suite
 ├── config.py             # Environment-based configuration
