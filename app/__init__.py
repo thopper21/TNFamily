@@ -31,8 +31,10 @@ def create_app(config_override=None):
     from app.auth import auth_bp
     from app.home import home_bp
     from app.stores import stores_bp
+    from app.todos import todos_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(home_bp)
     app.register_blueprint(stores_bp)
+    app.register_blueprint(todos_bp)
 
     return app

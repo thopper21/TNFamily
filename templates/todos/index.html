@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}House Todos — {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">House Todo List</h2>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="card shadow-sm">
+      <div class="card-header"><h5 class="mb-0">Items</h5></div>
+      <ul class="list-group list-group-flush" id="todos-list">
+        {% for todo in todos %}
+        <li class="list-group-item d-flex align-items-start gap-2" id="todo-row-{{ todo.id }}">
+          <input type="checkbox" class="form-check-input flex-shrink-0 mt-1"
+                 {% if todo.done %}checked{% endif %}
+                 onchange="toggleTodo({{ todo.id }}, this)">
+          <div class="flex-grow-1">
+            <div class="todo-title {% if todo.done %}text-decoration-line-through text-muted{% endif %}">{{ todo.title }}</div>
+            <div class="todo-description text-muted small {% if not todo.description %}d-none{% endif %}">{{ todo.description or '' }}</div>
+            <input type="text" class="form-control form-control-sm todo-title-input d-none mb-1" value="{{ todo.title }}">
+            <textarea class="form-control form-control-sm todo-description-input d-none" rows="2" placeholder="Details (optional)">{{ todo.description or '' }}</textarea>
+          </div>
+          <div class="d-flex gap-1 flex-shrink-0">
+            <button class="btn btn-sm btn-outline-secondary btn-edit">Edit</button>
+            <button class="btn btn-sm btn-success btn-save d-none">Save</button>
+            <button class="btn btn-sm btn-outline-secondary btn-cancel d-none">Cancel</button>
+            <form method="post" action="{{ url_for('todos.delete_todo', todo_id=todo.id) }}"
+                  onsubmit="return confirm('Delete ' + {{ todo.title | tojson }} + '?')">
+              <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+            </form>
+          </div>
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted" id="todos-empty">No todos yet. Add one below.</li>
+        {% endfor %}
+      </ul>
+      <div class="card-footer">
+        <form id="add-todo-form" class="d-flex flex-column gap-2">
+          <input type="text" id="todo-title" class="form-control" placeholder="What needs doing?" required>
+          <textarea id="todo-description" class="form-control" rows="2" placeholder="Details (optional)"></textarea>
+          <button type="submit" class="btn btn-primary align-self-start">Add</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% include 'partials/error_toast.html' %}
+
+<script>
+const TODOS_BASE = {{ url_for('todos.index') | tojson }};
+const CREATE_TODO_URL = {{ url_for('todos.create_todo') | tojson }};
+
+function toggleTodoUrl(id) { return TODOS_BASE + id + '/toggle'; }
+function editTodoUrl(id) { return TODOS_BASE + id + '/edit'; }
+function deleteTodoUrl(id) { return TODOS_BASE + id + '/delete'; }
+
+async function toggleTodo(todoId, checkbox) {
+  const row = document.getElementById('todo-row-' + todoId);
+  const wasChecked = !checkbox.checked;
+  try {
+    const resp = await fetch(toggleTodoUrl(todoId), {method: 'POST', headers: {'Content-Type': 'application/json'}});
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error);
+    const titleEl = row.querySelector('.todo-title');
+    titleEl.classList.toggle('text-decoration-line-through', data.done);
+    titleEl.classList.toggle('text-muted', data.done);
+  } catch (e) {
+    checkbox.checked = wasChecked;
+    showError(e.message || 'Something went wrong');
+  }
+}
+
+function wireEditButtons(li, todoId) {
+  const titleEl = li.querySelector('.todo-title');
+  const descEl = li.querySelector('.todo-description');
+  const titleInput = li.querySelector('.todo-title-input');
+  const descInput = li.querySelector('.todo-description-input');
+  const btnEdit = li.querySelector('.btn-edit');
+  const btnSave = li.querySelector('.btn-save');
+  const btnCancel = li.querySelector('.btn-cancel');
+
+  btnEdit.addEventListener('click', () => {
+    titleEl.classList.add('d-none');
+    descEl.classList.add('d-none');
+    titleInput.classList.remove('d-none');
+    descInput.classList.remove('d-none');
+    btnEdit.classList.add('d-none');
+    btnSave.classList.remove('d-none');
+    btnCancel.classList.remove('d-none');
+    titleInput.focus();
+  });
+
+  btnCancel.addEventListener('click', () => {
+    titleInput.value = titleEl.textContent;
+    descInput.value = descEl.textContent.trim();
+    titleEl.classList.remove('d-none');
+    descEl.classList.toggle('d-none', !descEl.textContent.trim());
+    titleInput.classList.add('d-none');
+    descInput.classList.add('d-none');
+    btnEdit.classList.remove('d-none');
+    btnSave.classList.add('d-none');
+    btnCancel.classList.add('d-none');
+  });
+
+  async function saveEdit() {
+    const title = titleInput.value.trim();
+    if (!title) return;
+    const description = descInput.value.trim();
+    try {
+      const resp = await fetch(editTodoUrl(todoId), {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({title, description}),
+      });
+      const data = await resp.json();
+      if (!data.ok) throw new Error(data.error);
+      titleEl.textContent = data.title;
+      descEl.textContent = data.description || '';
+      descEl.classList.toggle('d-none', !data.description);
+      titleInput.value = data.title;
+      descInput.value = data.description || '';
+      titleEl.classList.remove('d-none');
+      titleInput.classList.add('d-none');
+      descInput.classList.add('d-none');
+      btnEdit.classList.remove('d-none');
+      btnSave.classList.add('d-none');
+      btnCancel.classList.add('d-none');
+    } catch (e) {
+      showError(e.message || 'Something went wrong');
+    }
+  }
+
+  btnSave.addEventListener('click', saveEdit);
+  titleInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveEdit();
+    if (e.key === 'Escape') btnCancel.click();
+  });
+  descInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') btnCancel.click();
+  });
+}
+
+function buildTodoLi(id, title, description) {
+  const li = document.createElement('li');
+  li.className = 'list-group-item d-flex align-items-start gap-2';
+  li.id = 'todo-row-' + id;
+
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.className = 'form-check-input flex-shrink-0 mt-1';
+  checkbox.addEventListener('change', () => toggleTodo(id, checkbox));
+
+  const body = document.createElement('div');
+  body.className = 'flex-grow-1';
+
+  const titleEl = document.createElement('div');
+  titleEl.className = 'todo-title';
+  titleEl.textContent = title;
+
+  const descEl = document.createElement('div');
+  descEl.className = 'todo-description text-muted small' + (description ? '' : ' d-none');
+  descEl.textContent = description || '';
+
+  const titleInput = document.createElement('input');
+  titleInput.type = 'text';
+  titleInput.className = 'form-control form-control-sm todo-title-input d-none mb-1';
+  titleInput.value = title;
+
+  const descInput = document.createElement('textarea');
+  descInput.className = 'form-control form-control-sm todo-description-input d-none';
+  descInput.rows = 2;
+  descInput.placeholder = 'Details (optional)';
+  descInput.value = description || '';
+
+  body.append(titleEl, descEl, titleInput, descInput);
+
+  const btnEdit = document.createElement('button');
+  btnEdit.className = 'btn btn-sm btn-outline-secondary btn-edit';
+  btnEdit.textContent = 'Edit';
+  const btnSave = document.createElement('button');
+  btnSave.className = 'btn btn-sm btn-success btn-save d-none';
+  btnSave.textContent = 'Save';
+  const btnCancel = document.createElement('button');
+  btnCancel.className = 'btn btn-sm btn-outline-secondary btn-cancel d-none';
+  btnCancel.textContent = 'Cancel';
+
+  const delForm = document.createElement('form');
+  delForm.method = 'post';
+  delForm.action = deleteTodoUrl(id);
+  delForm.addEventListener('submit', (ev) => {
+    if (!confirm('Delete ' + title + '?')) ev.preventDefault();
+  });
+  const delBtn = document.createElement('button');
+  delBtn.type = 'submit';
+  delBtn.className = 'btn btn-sm btn-outline-danger';
+  delBtn.textContent = 'Delete';
+  delForm.appendChild(delBtn);
+
+  const btnGroup = document.createElement('div');
+  btnGroup.className = 'd-flex gap-1 flex-shrink-0';
+  btnGroup.append(btnEdit, btnSave, btnCancel, delForm);
+
+  li.append(checkbox, body, btnGroup);
+  return li;
+}
+
+document.querySelectorAll('#todos-list li[id^="todo-row-"]').forEach((li) => {
+  wireEditButtons(li, parseInt(li.id.replace('todo-row-', ''), 10));
+});
+
+document.getElementById('add-todo-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const titleInput = document.getElementById('todo-title');
+  const descInput = document.getElementById('todo-description');
+  const title = titleInput.value.trim();
+  if (!title) return;
+  try {
+    const resp = await fetch(CREATE_TODO_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({title, description: descInput.value.trim()}),
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error);
+    const emptyPlaceholder = document.getElementById('todos-empty');
+    if (emptyPlaceholder) emptyPlaceholder.remove();
+    const li = buildTodoLi(data.id, data.title, data.description);
+    wireEditButtons(li, data.id);
+    document.getElementById('todos-list').prepend(li);
+    titleInput.value = '';
+    descInput.value = '';
+  } catch (e) {
+    showError(e.message || 'Something went wrong');
+  }
+});
+</script>
+{% endblock %}
