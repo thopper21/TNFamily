@@ -54,3 +54,37 @@ def test_home_shows_item_count_for_pinned_store(logged_in_client, app):
         db.session.commit()
     resp = logged_in_client.get('/')
     assert b'2' in resp.data
+
+
+def test_home_has_shopping_lists_and_to_do_sections(logged_in_client):
+    resp = logged_in_client.get('/')
+    assert b'Shopping Lists' in resp.data
+    assert b'To Do' in resp.data
+
+
+def test_home_shows_no_pinned_stores_message(logged_in_client):
+    resp = logged_in_client.get('/')
+    assert b'No pinned stores yet' in resp.data
+
+
+def test_home_shows_all_caught_up_when_no_open_todos(logged_in_client):
+    resp = logged_in_client.get('/')
+    assert b'All caught up!' in resp.data
+
+
+def test_home_shows_open_todo_count(logged_in_client, app):
+    from app.models import Todo
+    from app.extensions import db
+    with app.app_context():
+        db.session.add(Todo(title='Clean the garage'))
+        db.session.add(Todo(title='Clean the laundry room'))
+        db.session.add(Todo(title='Already done', done=True))
+        db.session.commit()
+    resp = logged_in_client.get('/')
+    assert b'2 open items' in resp.data
+
+
+def test_home_to_do_card_links_to_todos_page(logged_in_client):
+    resp = logged_in_client.get('/')
+    assert b'View list' in resp.data
+    assert b'/todos/' in resp.data
