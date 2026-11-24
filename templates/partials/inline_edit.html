@@ -1,0 +1,49 @@
+<script>
+function wireInlineEdit({ fields, btnEdit, btnSave, btnCancel, onSave }) {
+  function exit(values) {
+    fields.forEach((f, i) => {
+      const val = values ? (values[i] || '') : f.display.textContent.trim();
+      f.display.textContent = val;
+      f.input.value = val;
+      f.input.classList.add('d-none');
+      f.display.classList.toggle('d-none', Boolean(f.optional) && !val);
+    });
+    btnEdit.classList.remove('d-none');
+    btnSave.classList.add('d-none');
+    btnCancel.classList.add('d-none');
+  }
+
+  btnEdit.addEventListener('click', () => {
+    fields.forEach((f) => {
+      f.display.classList.add('d-none');
+      f.input.classList.remove('d-none');
+    });
+    btnEdit.classList.add('d-none');
+    btnSave.classList.remove('d-none');
+    btnCancel.classList.remove('d-none');
+    fields[0].input.focus();
+    if (fields[0].input.select) fields[0].input.select();
+  });
+
+  btnCancel.addEventListener('click', () => exit());
+
+  async function save() {
+    const values = fields.map((f) => f.input.value.trim());
+    if (!values[0]) return;
+    try {
+      const result = await onSave(values);
+      exit(result);
+    } catch (e) {
+      showError(e.message || 'Something went wrong');
+    }
+  }
+
+  btnSave.addEventListener('click', save);
+  fields.forEach((f) => {
+    f.input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && f.input.tagName !== 'TEXTAREA') save();
+      if (e.key === 'Escape') btnCancel.click();
+    });
+  });
+}
+</script>
