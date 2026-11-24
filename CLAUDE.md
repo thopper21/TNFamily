@@ -51,6 +51,8 @@ const STORE_BASE = {{ url_for('stores.store_index', store_id=store.id) | tojson 
 ```
 Dynamic names in JS strings (e.g. `confirm()` dialogs) use `| tojson`, not `| e`.
 
+**Shared JS partials** (`templates/partials/`): `error_toast.html` provides `showError(msg)`; `inline_edit.html` provides `wireInlineEdit({fields, btnEdit, btnSave, btnCancel, onSave})` for the display-text/edit-input/Edit-Save-Cancel pattern (store name, section name, todo title+description all use it). `{% include %}` these rather than redefining the function in a new template.
+
 **Test fixtures** (`tests/conftest.py`): Three fixtures — `app` (creates in-memory SQLite DB, tears down after each test), `client` (unauthenticated test client), `logged_in_client` (pre-seeds a `User` and sets the Flask-Login session).
 
 ## Housekeeping

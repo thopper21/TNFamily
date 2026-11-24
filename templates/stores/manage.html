@@ -61,6 +61,7 @@
 </div>
 
 {% include 'partials/error_toast.html' %}
+{% include 'partials/inline_edit.html' %}
 
 <script>
 const STORE_BASE = {{ url_for('stores.store_index', store_id=store.id) | tojson }};
@@ -70,59 +71,24 @@ const ADD_SECTION_URL = {{ url_for('stores.add_section', store_id=store.id) | to
 function deleteSectionUrl(id) { return STORE_BASE + 'sections/' + id + '/delete'; }
 function editSectionUrl(id) { return STORE_BASE + 'sections/' + id + '/edit'; }
 
-// Store rename
-const nameDisplay = document.getElementById('store-name-display');
-const nameInput = document.getElementById('store-name-input');
-const btnEdit = document.getElementById('btn-edit-name');
-const btnSave = document.getElementById('btn-save-name');
-const btnCancel = document.getElementById('btn-cancel-name');
-
-btnEdit.addEventListener('click', () => {
-  nameDisplay.classList.add('d-none');
-  nameInput.classList.remove('d-none');
-  btnEdit.classList.add('d-none');
-  btnSave.classList.remove('d-none');
-  btnCancel.classList.remove('d-none');
-  nameInput.focus();
-  nameInput.select();
-});
-
-btnCancel.addEventListener('click', () => {
-  nameInput.value = nameDisplay.textContent;
-  nameDisplay.classList.remove('d-none');
-  nameInput.classList.add('d-none');
-  btnEdit.classList.remove('d-none');
-  btnSave.classList.add('d-none');
-  btnCancel.classList.add('d-none');
-});
-
-async function saveStoreName() {
-  const newName = nameInput.value.trim();
-  if (!newName) return;
-  try {
+wireInlineEdit({
+  fields: [{
+    display: document.getElementById('store-name-display'),
+    input: document.getElementById('store-name-input'),
+  }],
+  btnEdit: document.getElementById('btn-edit-name'),
+  btnSave: document.getElementById('btn-save-name'),
+  btnCancel: document.getElementById('btn-cancel-name'),
+  onSave: async ([name]) => {
     const resp = await fetch(RENAME_STORE_URL, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({name: newName}),
+      body: JSON.stringify({name}),
     });
     const data = await resp.json();
     if (!data.ok) throw new Error(data.error);
-    nameDisplay.textContent = data.name;
-    nameInput.value = data.name;
-    nameDisplay.classList.remove('d-none');
-    nameInput.classList.add('d-none');
-    btnEdit.classList.remove('d-none');
-    btnSave.classList.add('d-none');
-    btnCancel.classList.add('d-none');
-  } catch (e) {
-    showError(e.message || 'Something went wrong');
-  }
-}
-
-btnSave.addEventListener('click', saveStoreName);
-nameInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') saveStoreName();
-  if (e.key === 'Escape') btnCancel.click();
+    return [data.name];
+  },
 });
 
 const TOGGLE_PIN_URL = {{ url_for('stores.toggle_pin', store_id=store.id) | tojson }};
@@ -142,64 +108,30 @@ async function togglePin() {
   }
 }
 
-function wireEditButtons(li, sectionId) {
-  const nameSpan = li.querySelector('.section-name');
-  const editInput = li.querySelector('.section-edit-input');
-  const btnEdit = li.querySelector('.btn-edit');
-  const btnSave = li.querySelector('.btn-save');
-  const btnCancel = li.querySelector('.btn-cancel');
-
-  btnEdit.addEventListener('click', () => {
-    nameSpan.classList.add('d-none');
-    editInput.classList.remove('d-none');
-    btnEdit.classList.add('d-none');
-    btnSave.classList.remove('d-none');
-    btnCancel.classList.remove('d-none');
-    editInput.focus();
-    editInput.select();
-  });
-
-  btnCancel.addEventListener('click', () => {
-    editInput.value = nameSpan.textContent;
-    nameSpan.classList.remove('d-none');
-    editInput.classList.add('d-none');
-    btnEdit.classList.remove('d-none');
-    btnSave.classList.add('d-none');
-    btnCancel.classList.add('d-none');
-  });
-
-  async function saveEdit() {
-    const newName = editInput.value.trim();
-    if (!newName) return;
-    try {
+function wireSectionEditor(li, sectionId) {
+  wireInlineEdit({
+    fields: [{
+      display: li.querySelector('.section-name'),
+      input: li.querySelector('.section-edit-input'),
+    }],
+    btnEdit: li.querySelector('.btn-edit'),
+    btnSave: li.querySelector('.btn-save'),
+    btnCancel: li.querySelector('.btn-cancel'),
+    onSave: async ([name]) => {
       const resp = await fetch(editSectionUrl(sectionId), {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({name: newName}),
+        body: JSON.stringify({name}),
       });
       const data = await resp.json();
       if (!data.ok) throw new Error(data.error);
-      nameSpan.textContent = data.name;
-      editInput.value = data.name;
-      nameSpan.classList.remove('d-none');
-      editInput.classList.add('d-none');
-      btnEdit.classList.remove('d-none');
-      btnSave.classList.add('d-none');
-      btnCancel.classList.add('d-none');
-    } catch (e) {
-      showError(e.message || 'Something went wrong');
-    }
-  }
-
-  btnSave.addEventListener('click', saveEdit);
-  editInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') saveEdit();
-    if (e.key === 'Escape') btnCancel.click();
+      return [data.name];
+    },
   });
 }
 
 document.querySelectorAll('#sections-list li[id^="section-row-"]').forEach((li) => {
-  wireEditButtons(li, parseInt(li.id.replace('section-row-', ''), 10));
+  wireSectionEditor(li, parseInt(li.id.replace('section-row-', ''), 10));
 });
 
 document.getElementById('add-section-form').addEventListener('submit', async (e) => {
@@ -255,7 +187,7 @@ document.getElementById('add-section-form').addEventListener('submit', async (e)
     li.appendChild(nameSpan);
     li.appendChild(editInput);
     li.appendChild(btnGroup);
-    wireEditButtons(li, data.id);
+    wireSectionEditor(li, data.id);
     document.getElementById('sections-list').appendChild(li);
     nameInput.value = '';
   } catch (e) {
