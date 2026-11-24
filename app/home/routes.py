@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 
 from app.extensions import db
 from app.home import home_bp
-from app.models import ShoppingListItem, Store
+from app.models import ShoppingListItem, Store, Todo
 
 
 @home_bp.route('/')
@@ -25,4 +25,12 @@ def index():
             ).all()
         }
     pinned_stores = [(s, counts.get(s.id, 0)) for s in pinned]
-    return render_template('home/index.html', user=current_user, pinned_stores=pinned_stores)
+    open_todo_count = db.session.scalar(
+        select(func.count()).select_from(Todo).where(Todo.done == False)  # noqa: E712
+    )
+    return render_template(
+        'home/index.html',
+        user=current_user,
+        pinned_stores=pinned_stores,
+        open_todo_count=open_todo_count,
+    )

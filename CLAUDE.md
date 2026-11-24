@@ -26,7 +26,7 @@ Tests use in-memory SQLite — no database setup required.
 
 **Blueprints:**
 - `auth` (`/auth/*`) — Google OAuth via Authlib. Access is gated by `APPROVED_EMAILS` config; only listed addresses can log in.
-- `home` (`/`) — Landing page after login; shows shortcut cards for pinned stores.
+- `home` (`/`) — Landing page after login; two sections: "Shopping Lists" (shortcut cards for pinned stores) and "To Do" (open house-todo count, links to `todos.index`).
 - `stores` (`/stores/*`) — Multi-store shopping list feature (see below).
 - `todos` (`/todos/*`) — House todo list ("honey-do" items); see below.
 
